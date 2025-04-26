@@ -1,0 +1,119 @@
+/* Global */
+body {
+  font-family: 'Segoe UI', Roboto, sans-serif;
+  margin: 0;
+  padding: 20px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+  color: #e0e0e0;
+  -webkit-font-smoothing: antialiased;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.container {
+  max-width: 480px;
+  margin: 0 auto 40px;
+  background: linear-gradient(145deg, #2a2a2a, #202020);
+  padding: 30px;
+  border-radius: 18px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3), 0 2px 6px rgba(0,0,0,0.2);
+}
+h1, h2 {
+  margin: 0 0 20px;
+  color: #ffffff;
+  text-align: center;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+h1 { font-size: 28px; }
+h2 { font-size: 20px; }
+
+/* Form controls */
+label {
+  display: block;
+  color: #ffffffcc;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+select, input[type="text"], input[type="number"],
+input[type="file"], textarea {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  background: #2e2e2e;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 14px;
+  box-sizing: border-box;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+textarea { resize: vertical; min-height: 80px; }
+
+/* either globally: */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Buttons */
+.btn {
+  width: 100%;
+  max-width: 340px;
+  margin: 10px auto;
+  padding: 14px 30px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: center;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.3s cubic-bezier(0.25,0.8,0.25,1);
+  display: block;
+}
+.btn-primary {
+  background: linear-gradient(135deg, #26c6da, #0097a7);
+}
+.btn-accent {
+  background: linear-gradient(135deg, #7e57c2, #5e37b5);
+}
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(255,255,255,0.1);
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Spinner */
+#spinner {
+  border: 5px solid rgba(255,255,255,0.1);
+  border-top: 5px solid #4a90e2;
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  animation: spin 1.2s linear infinite;
+  margin: 20px auto;
+  display: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Toast */
+.status-toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 14px 24px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease-in-out;
+  z-index: 1000;
+}
+.toast-success { background: #38a86d; }
+.toast-error   { background: #ff6b6b; }

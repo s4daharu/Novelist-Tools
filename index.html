@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Multi-Tool Utility</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- App Selector -->
+  <div style="text-align:center; margin-bottom:30px;">
+    <button class="btn btn-accent" id="showSplitterBtn">EPUB Chapter Splitter</button>
+    <button class="btn btn-accent" id="showBackupBtn">Novel Backup Utility</button>
+  </div>
+
+  <!-- EPUB Chapter Splitter -->
+  <div id="splitterApp" class="container" style="display:none;">
+    <h1>EPUB Chapter Splitter</h1>
+    <label for="mode-select">Output Mode:</label>
+    <select id="mode-select">
+      <option value="single">Single Chapter per File</option>
+      <option value="grouped">Grouped Chapters per File</option>
+    </select>
+
+    <label for="chapter-pattern">Chapter Prefix:</label>
+    <input type="text" id="chapter-pattern" placeholder="e.g., test" value="test">
+    <label for="start-number">Start Number:</label>
+    <input type="number" id="start-number" min="1" value="1">
+    <div id="group-size-group" style="display:none;">
+      <label for="group-size">Chapters per File:</label>
+      <input type="number" id="group-size" min="1" value="4">
+    </div>
+    <label for="offset">Offset (skip first N):</label>
+    <input type="number" id="offset" min="0" value="0">
+
+    <label for="epub-upload" class="btn btn-accent">Upload EPUB File</label>
+    <input type="file" id="epub-upload" accept=".epub" style="display:none;">
+    <div id="file-name" style="font-size:14px;color:#cccccc;margin-bottom:15px;"></div>
+
+    <button class="btn btn-primary" id="split-btn" disabled>Split EPUB</button>
+    <div class="download-section" style="display:none; text-align:center; margin-top:20px;">
+      <a id="download-link" class="btn btn-primary">Download Chapters</a>
+    </div>
+  </div>
+
+  <!-- Novel Backup Utility -->
+  <div id="backupApp" class="container" style="display:none;">
+    <h1>Novel Backup File Utility</h1>
+    <label for="operationSelect">Select Operation:</label>
+    <select id="operationSelect">
+      <option value="create">Create New Backup File</option>
+      <option value="extend">Extend Existing Backup File</option>
+      <option value="merge">Merge Backup Files</option>
+      <option value="findReplace">Find &amp; Replace</option>
+    </select>
+
+    <!-- Create -->
+    <div id="createSection">
+      <h2>Create New Backup File</h2>
+      <label for="createProjectTitle">Project Title:</label>
+      <input type="text" id="createProjectTitle" placeholder="Enter project title">
+      <label for="createDescription">Description:</label>
+      <textarea id="createDescription" placeholder="Enter project description"></textarea>
+      <label for="createUniqueCode">Unique Code (Optional):</label>
+      <input type="text" id="createUniqueCode" placeholder="Leave blank to generate automatically">
+      <label for="createChapters">Number of Chapters:</label>
+      <input type="number" id="createChapters" min="1" value="3">
+      <label for="createPrefix">Prefix for Chapter Titles:</label>
+      <input type="text" id="createPrefix" placeholder="e.g., Chapter ">
+      <label for="createTOC">Show Table of Contents:</label>
+      <select id="createTOC"><option value="true">True</option><option value="false">False</option></select>
+      <label for="createIndentation">Automatic Indentation:</label>
+      <select id="createIndentation"><option value="true">True</option><option value="false">False</option></select>
+      <button class="btn btn-primary" id="createBtn">Generate and Download</button>
+    </div>
+
+    <!-- Extend -->
+    <div id="extendSection" style="display:none;">
+      <h2>Extend Existing Backup File</h2>
+      <label for="extendBackupFile">Upload Backup File:</label>
+      <input type="file" id="extendBackupFile" accept=".json,.txt">
+      <label for="extendExtraChapters">Extra Empty Chapters:</label>
+      <input type="number" id="extendExtraChapters" min="1" value="200">
+      <label for="extendPrefix">Prefix for New Chapters:</label>
+      <input type="text" id="extendPrefix" placeholder="e.g., Chapter ">
+      <button class="btn btn-primary" id="extendBtn">Extend and Download</button>
+    </div>
+
+    <!-- Merge -->
+    <div id="mergeSection" style="display:none;">
+      <h2>Merge Backup Files</h2>
+      <label for="mergeProjectTitle">Merged Project Title:</label>
+      <input type="text" id="mergeProjectTitle" placeholder="Enter merged project title">
+      <label for="mergeDescription">Merged Description:</label>
+      <textarea id="mergeDescription" placeholder="Enter merged project description"></textarea>
+      <label for="mergeBackupFiles">Upload Backup Files:</label>
+      <input type="file" id="mergeBackupFiles" accept=".json,.txt" multiple>
+      <label for="mergePrefix">Prefix for Chapters:</label>
+      <input type="text" id="mergePrefix" placeholder="e.g., Chapter ">
+      <button class="btn btn-primary" id="mergeBtn">Merge and Download</button>
+    </div>
+
+    <!-- Find & Replace -->
+    <div id="findReplaceSection" style="display:none;">
+      <h2>Find &amp; Replace in Backup File</h2>
+      <label for="frBackupFile">Upload Backup File:</label>
+      <input type="file" id="frBackupFile" accept=".json,.txt">
+      <label for="findPattern">Find Pattern:</label>
+      <input type="text" id="findPattern" placeholder="Enter search term or regex">
+      <label for="replaceText">Replacement Text:</label>
+      <input type="text" id="replaceText" placeholder="Enter replacement text">
+      <label><input type="checkbox" id="useRegex"> Use Regular Expressions</label>
+      <div style="display:flex; gap:10px; margin:15px 0;">
+        <button class="btn btn-primary" id="findPreviousBtn">Find Previous</button>
+        <button class="btn btn-primary" id="findNextBtn">Find Next</button>
+      </div>
+      <div style="display:flex; gap:10px; margin-bottom:15px;">
+        <button class="btn btn-primary" id="replaceNextBtn">Replace This</button>
+        <button class="btn btn-primary" id="replaceAllBtn">Replace All &amp; Download</button>
+      </div>
+      <div id="currentMatchDisplay" style="background:#2e2e2e; padding:12px; border-radius:8px; min-height:50px; white-space:pre-wrap; color:#e0e0e0;">
+        No match found yet.
+      </div>
+    </div>
+  </div>
+
+  <div id="spinner"></div>
+  <div id="toast" class="status-toast"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+  <script src="js/app.js" type="module"></script>
+</body>
+</html>
