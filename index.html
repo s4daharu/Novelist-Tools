@@ -461,7 +461,7 @@
 
                 let content = '';
                 for (let j = 0; j < groupSize && (i + j) < usableChaps.length; j++) {
-                  if (j > 0) content += '\n---------------- END ----------------\n';
+                  if (j > 0) content += '\n\n\n---------------- END ----------------\n\n\n';
                   content += usableChaps[i + j];
                 }
                 zip.file(name, content);
