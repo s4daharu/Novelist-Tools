@@ -89,34 +89,90 @@ document.addEventListener('DOMContentLoaded', () => {
     if (epubFile) processEPUB(epubFile);
   });
 
-  async function processEPUB(file) {
-    setSpinner(true);
-    try {
-      const buf = await readFileAsArrayBuffer(file);
-      const zip = await JSZip.loadAsync(buf);
-      const chapters = [];
+async function processEPUB(file) {
+  setSpinner(true);
+  try {
+    const buf = await readFileAsArrayBuffer(file);
+    const zip = await JSZip.loadAsync(buf);
+    const chapters = [];
 
-      await Promise.all(Object.keys(zip.files).map(async path => {
-        if (/\.(xhtml|html)$/.test(path)) {
-          const text = await zip.files[path].async('text');
-          const doc = new DOMParser().parseFromString(text, 'text/html');
-          const secs = doc.querySelectorAll(
-            'section[epub\\:type="chapter"], div[epub\\:type="chapter"], section.chapter, div.chapter'
-          );
-          if (secs.length) {
-            secs.forEach(sec => {
-              const ps = Array.from(sec.querySelectorAll('p'))
-                .map(p => p.textContent.trim())
-                .filter(t => t)
-                .join('\n');
-              if (ps) chapters.push(ps);
-            });
-          } else {
-            const bodyText = doc.body.textContent.trim();
-            if (bodyText) chapters.push(bodyText);
+    await Promise.all(Object.keys(zip.files).map(async path => {
+      if (/\.(xhtml|html)$/.test(path)) {
+        const text = await zip.files[path].async('text');
+        const doc = new DOMParser().parseFromString(text, 'text/html');
+        const secs = doc.querySelectorAll(
+          'section[epub\\:type="chapter"], div[epub\\:type="chapter"], section.chapter, div.chapter'
+        );
+        if (secs.length) {
+          secs.forEach(sec => {
+            const raw = Array.from(sec.querySelectorAll('p'))
+              .map(p => p.textContent.trim())
+              .filter(t => t)
+              .join('\n');
+            if (raw) {
+              // collapse multiple blank lines into one
+              const normalized = raw.replace(/\n{2,}/g, '\n');
+              chapters.push(normalized);
+            }
+          });
+        } else {
+          const raw = doc.body.textContent.trim();
+          if (raw) {
+            const normalized = raw.replace(/\n{2,}/g, '\n');
+            chapters.push(normalized);
           }
         }
-      }));
+      }
+    }));
+
+    const offset = Math.max(0, parseInt(document.getElementById('offset').value) || 0);
+    const trimmed = chapters.slice(offset);
+    if (!trimmed.length) {
+      showToast('No chapters after offset.', true);
+      return;
+    }
+
+    const mode   = document.getElementById('mode-select').value;
+    const prefix = document.getElementById('chapter-pattern').value.trim() || 'chapter';
+    let startNum = Math.max(1, parseInt(document.getElementById('start-number').value) || 1);
+
+    const outZip = new JSZip();
+    if (mode === 'single') {
+      trimmed.forEach((text, i) => {
+        const num = String(startNum + i).padStart(2, '0');
+        outZip.file(`${prefix}${num}.txt`, text);
+      });
+    } else {
+      let groupSize = Math.max(1, parseInt(document.getElementById('group-size').value) || 1);
+      for (let i = 0; i < trimmed.length; i += groupSize) {
+        const s = startNum + i;
+        const e = Math.min(startNum + trimmed.length - 1, s + groupSize - 1);
+        const name = s === e
+          ? `${prefix} C${String(s).padStart(2,'0')}.txt`
+          : `${prefix} C${String(s).padStart(2,'0')}-${String(e).padStart(2,'0')}.txt`;
+        let content = '';
+        for (let j = 0; j < groupSize && i + j < trimmed.length; j++) {
+          if (j) content += "\n---------------- END ----------------\n";
+          content += trimmed[i + j];
+        }
+        outZip.file(name, content);
+      }
+    }
+
+    const blob = await outZip.generateAsync({ type: 'blob' });
+    const link = document.getElementById('download-link');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${prefix}_chapters.zip`;
+    document.querySelector('#splitterApp .download-section').style.display = 'block';
+    showToast(`Extracted ${trimmed.length} chapters`);
+  } catch (err) {
+    console.error(err);
+    showToast(`Error: ${err.message}`, true);
+  } finally {
+    setSpinner(false);
+  }
+}
+
 
       const offset = Math.max(0, parseInt(document.getElementById('offset').value) || 0);
       const trimmed = chapters.slice(offset);
