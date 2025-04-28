@@ -16,172 +16,133 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
 
   <style>
-    /* Common reset & fonts */
+    /* === common reset & UI styles === */
     body {
       font-family: 'Segoe UI', Roboto, sans-serif;
-      margin: 0; padding: 0;
-      background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
-      color: #e0e0e0;
-      -webkit-font-smoothing: antialiased;
-      font-size: 16px; line-height: 1.6;
+      margin:0; padding:0;
+      background:linear-gradient(135deg,#1a1a1a,#0a0a0a);
+      color:#e0e0e0; -webkit-font-smoothing:antialiased;
+      font-size:16px; line-height:1.6;
     }
     header {
-      display: flex; align-items: center;
-      background: #111; padding: 15px 20px;
-      position: sticky; top: 0; z-index: 10;
+      display:flex; align-items:center;
+      background:#111; padding:15px 20px;
+      position:sticky; top:0; z-index:10;
     }
-    .menu-toggle {
-      font-size: 24px; cursor: pointer; margin-right: 20px;
-    }
-    .title {
-      font-size: 20px; font-weight: bold; color: #fff;
-    }
+    .menu-toggle { font-size:24px; cursor:pointer; margin-right:20px; }
+    .title { font-size:20px; font-weight:bold; color:#fff; }
 
-    /* Sidebar on right, fully hidden via transform when closed */
+    /* sidebar (hidden offscreen right until .open) */
     .sidebar {
-      position: fixed;
-      top: 0; right: 0;
-      width: 240px; height: 100%;
-      background: #222; padding: 20px;
-      box-shadow: -2px 0 8px rgba(0,0,0,0.5);
-      transform: translateX(100%);
-      transition: transform 0.3s ease;
-      z-index: 20;
-      overflow-y: auto;
+      position:fixed; top:0; right:0;
+      width:240px; height:100%; padding:20px;
+      background:#222; box-shadow:-2px 0 8px rgba(0,0,0,0.5);
+      transform:translateX(100%); transition:transform .3s ease;
+      z-index:20; overflow-y:auto;
     }
-    .sidebar.open {
-      transform: translateX(0);
-    }
-    .sidebar h2 {
-      color: #fff; margin-top: 0; margin-bottom: 20px;
-    }
+    .sidebar.open { transform:translateX(0); }
+    .sidebar h2 { color:#fff; margin:0 0 20px; }
     .sidebar button {
-      width: 100%; margin-bottom: 15px; padding: 12px;
-      border: none; border-radius: 8px;
-      background: linear-gradient(135deg, #26c6da, #0097a7);
-      color: #fff; font-size: 16px; cursor: pointer;
-      transition: all 0.3s;
+      width:100%; margin-bottom:15px; padding:12px;
+      border:none; border-radius:8px;
+      background:linear-gradient(135deg,#26c6da,#0097a7);
+      color:#fff; font-size:16px; cursor:pointer;
+      transition:all .3s;
     }
     .sidebar button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 16px rgba(255,255,255,0.1);
+      transform:translateY(-2px);
+      box-shadow:0 8px 16px rgba(255,255,255,0.1);
     }
 
     .container {
-      max-width: 480px; margin: 20px auto; padding: 0 20px;
+      max-width:480px; margin:20px auto; padding:0 20px;
     }
     .card {
-      background: linear-gradient(145deg, #2a2a2a, #202020);
-      padding: 30px; border-radius: 18px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3), 0 2px 6px rgba(0,0,0,0.2);
+      background:linear-gradient(145deg,#2a2a2a,#202020);
+      padding:30px; border-radius:18px;
+      box-shadow:0 4px 15px rgba(0,0,0,0.3),0 2px 6px rgba(0,0,0,0.2);
     }
     h1 {
-      color: #fff; text-align: center;
-      font-size: 28px; margin-bottom: 25px;
-      text-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      color:#fff; text-align:center;
+      font-size:28px; margin-bottom:25px;
+      text-shadow:0 2px 6px rgba(0,0,0,0.3);
     }
 
-    /* Buttons */
     .btn {
-      width: 100%; max-width: 340px; margin: 10px auto;
-      padding: 14px 30px; border: none; border-radius: 12px;
-      cursor: pointer; font-size: 16px; font-weight: 500;
-      text-align: center; text-decoration: none; color: white;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      transition: all 0.3s cubic-bezier(0.25,0.8,0.25,1);
-      display: block; box-sizing: border-box;
+      width:100%; max-width:340px; margin:10px auto;
+      padding:14px 30px; border:none; border-radius:12px;
+      cursor:pointer; font-size:16px; font-weight:500;
+      text-align:center; color:white;
+      box-shadow:0 2px 4px rgba(0,0,0,0.1);
+      transition:all .3s cubic-bezier(.25,.8,.25,1);
+      display:block; box-sizing:border-box;
     }
     .btn:disabled {
-      opacity: 0.6; cursor: not-allowed; transform: none;
-      box-shadow: none;
+      opacity:.6; cursor:not-allowed; transform:none;
+      box-shadow:none;
     }
 
-    /* EPUB Splitter specific */
-    .upload-btn {
-      background: linear-gradient(135deg, #7e57c2, #5e37b5);
-    }
-    .split-btn {
-      background: linear-gradient(135deg, #26c6da, #0097a7);
-    }
-    .download-btn {
-      background: linear-gradient(135deg, #ff7043, #e64a19);
-    }
+    /* EPUB Splitter buttons */
+    .upload-btn { background:linear-gradient(135deg,#7e57c2,#5e37b5); }
+    .split-btn  { background:linear-gradient(135deg,#26c6da,#0097a7); }
+    .download-btn{ background:linear-gradient(135deg,#ff7043,#e64a19); }
+
     .mode-section, .options-section {
-      text-align: center; margin-bottom: 25px;
+      text-align:center; margin-bottom:25px;
     }
-    .mode-section select, .option-group input {
-      background: #2e2e2e; border: 2px solid transparent;
-      border-radius: 8px; padding: 12px; font-size: 14px;
-      color: #e0e0e0; transition: border-color 0.3s, box-shadow 0.3s;
-      width: 100%; max-width: 300px; margin: 10px auto 0;
+    .mode-section select,
+    .option-group input {
+      background:#2e2e2e; border:2px solid transparent;
+      border-radius:8px; padding:12px; font-size:14px;
+      color:#e0e0e0; width:100%; max-width:300px;
+      margin:10px auto 0; box-sizing:border-box;
+      transition:border-color .3s, box-shadow .3s;
     }
-    .option-group {
-      margin-bottom: 15px;
-    }
-    .option-group label {
-      font-weight: 500; color: #ffffffcc;
-      display: block; margin-bottom: 8px;
-    }
+    .option-group { margin-bottom:15px; }
+    .option-group label { color:#ffffffcc; margin-bottom:8px; display:block; }
 
-    /* Spinners and status */
     .spinner, .spinner-backup {
-      border: 5px solid rgba(255,255,255,0.1);
-      border-top: 5px solid #4a90e2;
-      border-radius: 50%; width: 45px; height: 45px;
-      animation: spin 1.2s cubic-bezier(0.5,0,0.5,1) infinite;
-      margin: 20px auto; display: none;
+      border:5px solid rgba(255,255,255,0.1);
+      border-top:5px solid #4a90e2;
+      border-radius:50%; width:45px; height:45px;
+      animation:spin 1.2s linear infinite;
+      margin:20px auto; display:none;
     }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    #statusMessage {
-      border-radius: 10px; padding: 16px;
-      position: relative; animation: slideIn 0.3s ease-out;
-      margin-top: 20px;
-    }
-    @keyframes slideIn {
-      from { transform: translateY(20px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
+    @keyframes spin { to { transform:rotate(360deg); } }
 
-    /* Backup Utility specific */
-    .operation-selector, .operation-section {
-      margin-bottom: 25px;
+    #statusMessage {
+      border-radius:10px; padding:16px;
+      margin-top:20px; animation:slideIn .3s ease-out;
     }
-    label {
-      display: block; color: #ffffffcc;
-      font-weight: 500; margin-bottom: 8px;
+    @keyframes slideIn { from { opacity:0; transform:translateY(20px);} to { opacity:1; transform:translateY(0);} }
+
+    /* Backup tool */
+    .operation-selector, .operation-section { margin-bottom:25px; }
+    select, input[type="text"], input[type="number"], input[type="file"], textarea {
+      width:100%; padding:12px; margin-bottom:15px;
+      background:#2e2e2e; border:2px solid transparent;
+      border-radius:8px; color:#e0e0e0; font-size:14px;
+      box-sizing:border-box; transition:border-color .3s, box-shadow .3s;
     }
-    select, input[type="text"], input[type="number"],
-    input[type="file"], textarea {
-      width: 100%; padding: 12px; margin-bottom: 15px;
-      background: #2e2e2e; border: 2px solid transparent;
-      border-radius: 8px; color: #e0e0e0; font-size: 14px;
-      box-sizing: border-box; transition: border-color 0.3s, box-shadow 0.3s;
-    }
-    textarea {
-      resize: vertical; min-height: 80px;
-    }
-    .btn-primary {
-      background: linear-gradient(135deg, #26c6da, #0097a7);
-    }
-    .btn-accent {
-      background: linear-gradient(135deg, #7e57c2, #5e37b5);
-    }
+    textarea { resize:vertical; min-height:80px; }
+    .btn-primary { background:linear-gradient(135deg,#26c6da,#0097a7); }
+    .btn-accent  { background:linear-gradient(135deg,#7e57c2,#5e37b5); }
+
     .status-toast {
-      position: fixed; bottom: 20px; left: 50%;
-      transform: translateX(-50%);
-      padding: 14px 24px; border-radius: 8px;
-      color: #fff; font-size: 14px;
-      opacity: 0; pointer-events: none;
-      transition: opacity 0.3s ease-in-out; z-index: 1000;
+      position:fixed; bottom:20px; left:50%;
+      transform:translateX(-50%);
+      padding:14px 24px; border-radius:8px;
+      color:#fff; font-size:14px;
+      opacity:0; pointer-events:none;
+      transition:opacity .3s;
+      z-index:1000;
     }
-    .toast-success { background: #38a86d; }
-    .toast-error   { background: #ff6b6b; }
+    .toast-success { background:#38a86d; }
+    .toast-error   { background:#ff6b6b; }
   </style>
 </head>
-<body>
 
+<body>
   <header>
     <div class="menu-toggle" onclick="toggleMenu()">☰</div>
     <div class="title" id="appTitle">EPUB Chapter Splitter</div>
@@ -194,13 +155,13 @@
   </div>
 
   <div class="container">
-    <!-- EPUB Chapter Splitter -->
+    <!-- EPUB Splitter -->
     <div id="splitterApp" class="card">
       <h1>EPUB Chapter Splitter</h1>
       <div class="upload-section">
         <label for="epubUpload" class="btn upload-btn">Upload EPUB File</label>
         <input type="file" id="epubUpload" accept=".epub" style="display:none;">
-        <div id="epubFileName" style="margin-top:10px;font-size:14px;color:#cccccc;text-align:center;"></div>
+        <div id="epubFileName" style="margin-top:10px;font-size:14px;color:#ccc;text-align:center;"></div>
       </div>
       <div class="mode-section">
         <label for="modeSelect">Output Mode:</label>
@@ -218,6 +179,10 @@
           <label for="startNumber">Start Number:</label>
           <input type="number" id="startNumber" min="1" value="1">
         </div>
+        <div class="option-group">
+          <label for="offsetNumber">Offset (skip chapters):</label>
+          <input type="number" id="offsetNumber" min="0" value="0">
+        </div>
         <div class="option-group" id="groupSizeGroup" style="display:none;">
           <label for="groupSize">Chapters per File:</label>
           <input type="number" id="groupSize" min="1" value="4">
@@ -231,7 +196,7 @@
       </div>
     </div>
 
-    <!-- Novel Backup File Utility -->
+    <!-- Backup Utility -->
     <div id="backupApp" class="card" style="display:none;">
       <h1>Novel Backup File Utility</h1>
       <div class="operation-selector">
@@ -325,7 +290,7 @@
     </div>
   </div>
 
-  <!-- Install App button -->
+  <!-- Install button -->
   <button id="installBtn" style="
     display:none;
     position:fixed; bottom:20px; right:20px;
@@ -336,24 +301,22 @@
 
   <div id="toast" class="status-toast"></div>
 
-  <!-- JSZip for EPUB parsing -->
+  <!-- JSZip -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
 
   <script>
-    // Sidebar toggle & app switch
+    /* ---- Sidebar & PWA prompt ---- */
     function toggleMenu() {
       document.getElementById('sidebar').classList.toggle('open');
     }
     function switchApp(app) {
-      document.getElementById('splitterApp').style.display = app === 'splitter' ? 'block' : 'none';
-      document.getElementById('backupApp').style.display   = app === 'backup'  ? 'block' : 'none';
-      document.getElementById('appTitle').textContent      = app === 'splitter'
-        ? 'EPUB Chapter Splitter'
-        : 'Novel Backup File Utility';
+      document.getElementById('splitterApp').style.display = app==='splitter' ? 'block':'none';
+      document.getElementById('backupApp').style.display   = app==='backup'? 'block':'none';
+      document.getElementById('appTitle').textContent      = app==='splitter'
+        ? 'EPUB Chapter Splitter' : 'Novel Backup File Utility';
       toggleMenu();
     }
 
-    // PWA installation prompt
     let deferredPrompt;
     const installBtn = document.getElementById('installBtn');
     window.addEventListener('beforeinstallprompt', e => {
@@ -367,7 +330,6 @@
       deferredPrompt = null;
     });
 
-    // Register service worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('service-worker.js')
@@ -376,7 +338,7 @@
       });
     }
 
-    // EPUB Splitter Logic
+    /* ---- EPUB Splitter Logic (with offset) ---- */
     document.addEventListener('DOMContentLoaded', () => {
       const uploadInput   = document.getElementById('epubUpload');
       const fileNameEl    = document.getElementById('epubFileName');
@@ -405,9 +367,10 @@
       splitBtn.addEventListener('click', () => {
         if (!selectedFile) return;
         spinnerSpl.style.display = 'block';
-        statusEl.style.display = 'none';
-        downloadSec.style.display = 'none';
+        statusEl.style.display   = 'none';
+        downloadSec.style.display= 'none';
 
+        // Read EPUB as ArrayBuffer
         readFileAsArrayBuffer(selectedFile)
           .then(buffer => JSZip.loadAsync(buffer))
           .then(epub => {
@@ -465,51 +428,63 @@
           })
           .then(chapters => {
             if (!chapters.length) throw new Error('No chapters found. Check EPUB structure.');
-            const pattern = document.getElementById('chapterPattern').value.trim() || 'chapter';
-            let start     = parseInt(document.getElementById('startNumber').value, 10) || 1;
-            const mode    = modeSelect.value;
-            const zip     = new JSZip();
+
+            // NEW: read offset
+            const pattern     = document.getElementById('chapterPattern').value.trim() || 'chapter';
+            const startNumber = parseInt(document.getElementById('startNumber').value, 10) || 1;
+            const offset      = Math.max(0, parseInt(document.getElementById('offsetNumber').value, 10) || 0);
+            const mode        = modeSelect.value;
+
+            // apply offset
+            const usableChaps    = chapters.slice(offset);
+            const effectiveStart = startNumber + offset;
+
+            const zip = new JSZip();
 
             if (mode === 'single') {
-              chapters.forEach((ch, i) => {
-                const num = String(start + i).padStart(2, '0');
-                zip.file(`${pattern}${num}.txt`, ch);
+              usableChaps.forEach((text, i) => {
+                const chapNum = String(effectiveStart + i).padStart(2, '0');
+                zip.file(`${pattern}${chapNum}.txt`, text);
               });
             } else {
               let groupSize = parseInt(document.getElementById('groupSize').value, 10) || 1;
-              for (let i = 0; i < chapters.length; i += groupSize) {
-                const s = start + i;
-                const e = Math.min(start + i + groupSize - 1, start + chapters.length - 1);
-                const name = s === e
-                  ? `${pattern} C${String(s).padStart(2, '0')}.txt`
-                  : `${pattern} C${String(s).padStart(2, '0')}-${String(e).padStart(2, '0')}.txt`;
+              for (let i = 0; i < usableChaps.length; i += groupSize) {
+                const groupStart = effectiveStart + i;
+                const groupEnd = Math.min(
+                  effectiveStart + i + groupSize - 1,
+                  effectiveStart + usableChaps.length - 1
+                );
+                const name = groupStart === groupEnd
+                  ? `${pattern} C${String(groupStart).padStart(2,'0')}.txt`
+                  : `${pattern} C${String(groupStart).padStart(2,'0')}-` +
+                    `${String(groupEnd).padStart(2,'0')}.txt`;
+
                 let content = '';
-                for (let j = 0; j < groupSize && i + j < chapters.length; j++) {
+                for (let j = 0; j < groupSize && (i + j) < usableChaps.length; j++) {
                   if (j > 0) content += '\n---------------- END ----------------\n';
-                  content += chapters[i + j];
+                  content += usableChaps[i + j];
                 }
                 zip.file(name, content);
               }
             }
 
-            return zip.generateAsync({ type: 'blob' });
+            return zip.generateAsync({ type: 'blob' })
+                      .then(blob => ({ blob, count: usableChaps.length, skipped: offset }));
           })
-          .then(blob => {
-            downloadLink.href = URL.createObjectURL(blob);
+          .then(({ blob, count, skipped }) => {
+            downloadLink.href     = URL.createObjectURL(blob);
             downloadLink.download = `${document.getElementById('chapterPattern').value || 'chapter'}_chapters.zip`;
-            document.querySelector('#splitterApp .download-section').style.display = 'block';
-            statusEl.textContent = 'Successfully extracted chapters.';
-            statusEl.className = 'status success';
+            downloadSec.style.display = 'block';
+            statusEl.textContent = `Extracted ${count} chapters (skipped ${skipped})`;
+            statusEl.className   = 'status success';
             statusEl.style.display = 'block';
           })
           .catch(err => {
             statusEl.textContent = `Error: ${err.message}`;
-            statusEl.className = 'status error';
+            statusEl.className   = 'status error';
             statusEl.style.display = 'block';
           })
-          .finally(() => {
-            spinnerSpl.style.display = 'none';
-          });
+          .finally(() => { spinnerSpl.style.display = 'none'; });
       });
 
       function readFileAsArrayBuffer(file) {
@@ -522,7 +497,7 @@
       }
     });
 
-    // Backup Utility Logic
+    /* ---- Backup Utility Logic ---- */
     document.addEventListener('DOMContentLoaded', () => {
       const toastEl = document.getElementById('toast');
       function showToast(msg, isError = false) {
@@ -534,7 +509,6 @@
       const spinnerB = document.getElementById('spinnerBackup');
       function setSpinner(on) { spinnerB.style.display = on ? 'block' : 'none'; }
 
-      // Switch operation sections
       const opSelect = document.getElementById('operationSelect');
       opSelect.addEventListener('change', () => {
         ['create','extend','merge','findReplace'].forEach(op => {
