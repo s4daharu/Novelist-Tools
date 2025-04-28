@@ -16,11 +16,11 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
 
   <style>
-    /* === COMMON RESET & UI STYLES === */
+    /* === common reset & UI styles === */
     body {
       font-family: 'Segoe UI', Roboto, sans-serif;
       margin:0; padding:0;
-      background: linear-gradient(135deg,#1a1a1a,#0a0a0a);
+      background:linear-gradient(135deg,#1a1a1a,#0a0a0a);
       color:#e0e0e0; -webkit-font-smoothing:antialiased;
       font-size:16px; line-height:1.6;
     }
@@ -32,7 +32,7 @@
     .menu-toggle { font-size:24px; cursor:pointer; margin-right:20px; }
     .title { font-size:20px; font-weight:bold; color:#fff; }
 
-    /* Sidebar */
+    /* sidebar (hidden offscreen right until .open) */
     .sidebar {
       position:fixed; top:0; right:0;
       width:240px; height:100%; padding:20px;
@@ -82,17 +82,16 @@
       box-shadow:none;
     }
 
-    /* EPUB Splitter Buttons */
-    .upload-btn   { background:linear-gradient(135deg,#7e57c2,#5e37b5); }
-    .split-btn    { background:linear-gradient(135deg,#26c6da,#0097a7); }
-    .download-btn { background:linear-gradient(135deg,#ff7043,#e64a19); }
+    /* EPUB Splitter buttons */
+    .upload-btn { background:linear-gradient(135deg,#7e57c2,#5e37b5); }
+    .split-btn  { background:linear-gradient(135deg,#26c6da,#0097a7); }
+    .download-btn{ background:linear-gradient(135deg,#ff7043,#e64a19); }
 
     .mode-section, .options-section {
       text-align:center; margin-bottom:25px;
     }
     .mode-section select,
-    .option-group input,
-    .option-group textarea {
+    .option-group input {
       background:#2e2e2e; border:2px solid transparent;
       border-radius:8px; padding:12px; font-size:14px;
       color:#e0e0e0; width:100%; max-width:300px;
@@ -100,9 +99,7 @@
       transition:border-color .3s, box-shadow .3s;
     }
     .option-group { margin-bottom:15px; }
-    .option-group label {
-      display:block; color:#ffffffcc; margin-bottom:8px;
-    }
+    .option-group label { color:#ffffffcc; margin-bottom:8px; display:block; }
 
     .spinner, .spinner-backup {
       border:5px solid rgba(255,255,255,0.1);
@@ -119,14 +116,26 @@
     }
     @keyframes slideIn { from { opacity:0; transform:translateY(20px);} to { opacity:1; transform:translateY(0);} }
 
-    /* Backup Utility Styles... (unchanged) */
+    /* Backup tool */
+    .operation-selector, .operation-section { margin-bottom:25px; }
+    select, input[type="text"], input[type="number"], input[type="file"], textarea {
+      width:100%; padding:12px; margin-bottom:15px;
+      background:#2e2e2e; border:2px solid transparent;
+      border-radius:8px; color:#e0e0e0; font-size:14px;
+      box-sizing:border-box; transition:border-color .3s, box-shadow .3s;
+    }
+    textarea { resize:vertical; min-height:80px; }
+    .btn-primary { background:linear-gradient(135deg,#26c6da,#0097a7); }
+    .btn-accent  { background:linear-gradient(135deg,#7e57c2,#5e37b5); }
 
     .status-toast {
       position:fixed; bottom:20px; left:50%;
       transform:translateX(-50%);
       padding:14px 24px; border-radius:8px;
-      color:#fff; font-size:14px; opacity:0;
-      pointer-events:none; transition:opacity .3s; z-index:1000;
+      color:#fff; font-size:14px;
+      opacity:0; pointer-events:none;
+      transition:opacity .3s;
+      z-index:1000;
     }
     .toast-success { background:#38a86d; }
     .toast-error   { background:#ff6b6b; }
@@ -146,16 +155,14 @@
   </div>
 
   <div class="container">
-    <!-- EPUB Chapter Splitter -->
+    <!-- EPUB Splitter -->
     <div id="splitterApp" class="card">
       <h1>EPUB Chapter Splitter</h1>
-
       <div class="upload-section">
         <label for="epubUpload" class="btn upload-btn">Upload EPUB File</label>
         <input type="file" id="epubUpload" accept=".epub" style="display:none;">
         <div id="epubFileName" style="margin-top:10px;font-size:14px;color:#ccc;text-align:center;"></div>
       </div>
-
       <div class="mode-section">
         <label for="modeSelect">Output Mode:</label>
         <select id="modeSelect">
@@ -163,7 +170,6 @@
           <option value="grouped">Grouped Chapters per File</option>
         </select>
       </div>
-
       <div class="options-section">
         <div class="option-group">
           <label for="chapterPattern">Chapter Prefix:</label>
@@ -173,35 +179,15 @@
           <label for="startNumber">Start Number:</label>
           <input type="number" id="startNumber" min="1" value="1">
         </div>
-        <!-- Offset Mode -->
-        <div class="option-group" id="offsetGroup">
+        <div class="option-group">
           <label for="offsetNumber">Offset (skip chapters):</label>
           <input type="number" id="offsetNumber" min="0" value="0">
-        </div>
-        <!-- Preview & Range Mode -->
-        <div class="option-group">
-          <label>Selection Mode:</label>
-          <label><input type="radio" name="selMode" value="offset" checked> Offset</label>
-          <label><input type="radio" name="selMode" value="preview"> Preview & Range</label>
-        </div>
-        <div id="previewSection" style="display:none;
-            max-height:200px; overflow-y:auto;
-            border:1px solid #444; padding:10px;
-            border-radius:8px; background:#2e2e2e; margin-bottom:15px;">
-          <div class="option-group">
-            <label for="rangeInput">Range (e.g., 5-20):</label>
-            <input type="text" id="rangeInput" placeholder="5-20">
-          </div>
-          <ul id="chapterList" style="list-style:none;padding:0;margin:10px 0;">
-            <!-- JS will populate -->
-          </ul>
         </div>
         <div class="option-group" id="groupSizeGroup" style="display:none;">
           <label for="groupSize">Chapters per File:</label>
           <input type="number" id="groupSize" min="1" value="4">
         </div>
       </div>
-
       <button id="splitBtn" class="btn split-btn" disabled>Split EPUB</button>
       <div id="spinnerSplitter" class="spinner"></div>
       <div id="statusMessage" class="status" style="display:none;"></div>
@@ -210,13 +196,101 @@
       </div>
     </div>
 
-    <!-- Novel Backup Utility (unchanged) -->
+    <!-- Backup Utility -->
     <div id="backupApp" class="card" style="display:none;">
-      <!-- backup UI here... -->
+      <h1>Novel Backup File Utility</h1>
+      <div class="operation-selector">
+        <label for="operationSelect">Select Operation:</label>
+        <select id="operationSelect">
+          <option value="create">Create New Backup File</option>
+          <option value="extend">Extend Existing Backup File</option>
+          <option value="merge">Merge Backup Files</option>
+          <option value="findReplace">Find &amp; Replace</option>
+        </select>
+      </div>
+
+      <!-- Create -->
+      <div id="createSection" class="operation-section">
+        <h2>Create New Backup File</h2>
+        <label for="createProjectTitle">Project Title:</label>
+        <input type="text" id="createProjectTitle" placeholder="Enter project title">
+        <label for="createDescription">Description:</label>
+        <textarea id="createDescription" placeholder="Enter project description"></textarea>
+        <label for="createUniqueCode">Unique Code (Optional):</label>
+        <input type="text" id="createUniqueCode" placeholder="Leave blank to generate automatically">
+        <label for="createChapters">Number of Chapters:</label>
+        <input type="number" id="createChapters" min="1" value="3">
+        <label for="createPrefix">Prefix for Chapter Titles:</label>
+        <input type="text" id="createPrefix" placeholder="e.g., Chapter ">
+        <label for="createTOC">Show Table of Contents:</label>
+        <select id="createTOC">
+          <option value="true">True</option>
+          <option value="false">False</option>
+        </select>
+        <label for="createIndentation">Automatic Indentation:</label>
+        <select id="createIndentation">
+          <option value="true">True</option>
+          <option value="false">False</option>
+        </select>
+        <button id="createBtn" class="btn btn-primary">Generate and Download</button>
+      </div>
+
+      <!-- Extend -->
+      <div id="extendSection" class="operation-section" style="display:none;">
+        <h2>Extend Existing Backup File</h2>
+        <label for="extendBackupFile">Upload Backup File:</label>
+        <input type="file" id="extendBackupFile" accept=".json,.txt">
+        <label for="extendExtraChapters">Extra Empty Chapters:</label>
+        <input type="number" id="extendExtraChapters" min="1" value="200">
+        <label for="extendPrefix">Prefix for New Chapters:</label>
+        <input type="text" id="extendPrefix" placeholder="e.g., Chapter ">
+        <button id="extendBtn" class="btn btn-primary">Extend and Download</button>
+      </div>
+
+      <!-- Merge -->
+      <div id="mergeSection" class="operation-section" style="display:none;">
+        <h2>Merge Backup Files</h2>
+        <label for="mergeProjectTitle">Merged Project Title:</label>
+        <input type="text" id="mergeProjectTitle" placeholder="Enter merged project title">
+        <label for="mergeDescription">Merged Description:</label>
+        <textarea id="mergeDescription" placeholder="Enter merged project description"></textarea>
+        <label for="mergeBackupFiles">Upload Backup Files:</label>
+        <input type="file" id="mergeBackupFiles" accept=".json,.txt" multiple>
+        <label for="mergePrefix">Prefix for Chapters:</label>
+        <input type="text" id="mergePrefix" placeholder="e.g., Chapter ">
+        <button id="mergeBtn" class="btn btn-primary">Merge and Download</button>
+      </div>
+
+      <!-- Find & Replace -->
+      <div id="findReplaceSection" class="operation-section" style="display:none;">
+        <h2>Find &amp; Replace in Backup File</h2>
+        <label for="frBackupFile">Upload Backup File:</label>
+        <input type="file" id="frBackupFile" accept=".json,.txt">
+        <label for="findPattern">Find Pattern:</label>
+        <input type="text" id="findPattern" placeholder="Enter search term or regex">
+        <label for="replaceText">Replacement Text:</label>
+        <input type="text" id="replaceText" placeholder="Enter replacement text">
+        <label><input type="checkbox" id="useRegex"> Use Regular Expressions</label>
+        <div style="display:flex; gap:10px; margin:15px 0;">
+          <button id="findPreviousBtn" class="btn btn-primary">Find Previous</button>
+          <button id="findNextBtn" class="btn btn-primary">Find Next</button>
+        </div>
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+          <button id="replaceNextBtn" class="btn btn-primary">Replace This</button>
+          <button id="replaceAllBtn" class="btn btn-primary">Replace All &amp; Download</button>
+        </div>
+        <div id="currentMatchDisplay" style="
+             background:#2e2e2e; padding:12px; border-radius:8px;
+             min-height:50px; white-space:pre-wrap; color:#e0e0e0;">
+          No match found yet.
+        </div>
+      </div>
+
+      <div id="spinnerBackup" class="spinner-backup"></div>
     </div>
   </div>
 
-  <!-- Install App Button -->
+  <!-- Install button -->
   <button id="installBtn" style="
     display:none;
     position:fixed; bottom:20px; right:20px;
@@ -224,206 +298,200 @@
     color:white; border:none; border-radius:8px;
     font-size:16px; cursor:pointer;
   ">Install App</button>
+
   <div id="toast" class="status-toast"></div>
 
+  <!-- JSZip -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+
   <script>
-    // Sidebar & PWA prompt
-    function toggleMenu(){document.getElementById('sidebar').classList.toggle('open');}
-    function switchApp(app){
-      document.getElementById('splitterApp').style.display = app==='splitter'?'block':'none';
-      document.getElementById('backupApp').style.display   = app==='backup'   ?'block':'none';
-      document.getElementById('appTitle').textContent      = app==='splitter'?'EPUB Chapter Splitter':'Novel Backup File Utility';
+    /* ---- Sidebar & PWA prompt ---- */
+    function toggleMenu() {
+      document.getElementById('sidebar').classList.toggle('open');
+    }
+    function switchApp(app) {
+      document.getElementById('splitterApp').style.display = app==='splitter' ? 'block':'none';
+      document.getElementById('backupApp').style.display   = app==='backup'? 'block':'none';
+      document.getElementById('appTitle').textContent      = app==='splitter'
+        ? 'EPUB Chapter Splitter' : 'Novel Backup File Utility';
       toggleMenu();
     }
+
     let deferredPrompt;
     const installBtn = document.getElementById('installBtn');
-    window.addEventListener('beforeinstallprompt', e=>{
-      e.preventDefault(); deferredPrompt = e; installBtn.style.display='block';
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.style.display = 'block';
     });
-    installBtn.addEventListener('click',async()=>{
-      installBtn.style.display='none'; deferredPrompt.prompt(); deferredPrompt=null;
+    installBtn.addEventListener('click', async () => {
+      installBtn.style.display = 'none';
+      deferredPrompt.prompt();
+      deferredPrompt = null;
     });
-    if('serviceWorker' in navigator){
-      window.addEventListener('load',()=>{
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
         navigator.serviceWorker.register('service-worker.js')
-          .then(reg=>console.log('SW registered:',reg.scope))
-          .catch(console.error);
+          .then(reg => console.log('SW registered, scope:', reg.scope))
+          .catch(err => console.error('SW registration failed:', err));
       });
     }
 
-    /* EPUB Splitter Logic with Preview & Range */
-    document.addEventListener('DOMContentLoaded',()=>{
-      const epubInput  = document.getElementById('epubUpload');
-      const fileNameEl = document.getElementById('epubFileName');
-      const splitBtn   = document.getElementById('splitBtn');
-      const modeSelect = document.getElementById('modeSelect');
-      const offsetGroup= document.getElementById('offsetGroup');
-      const grpSizeGrp = document.getElementById('groupSizeGroup');
-      const previewSec = document.getElementById('previewSection');
-      const chapterList= document.getElementById('chapterList');
-      const spinner    = document.getElementById('spinnerSplitter');
-      const statusEl   = document.getElementById('statusMessage');
-      const downloadSec= document.querySelector('#splitterApp .download-section');
-      const downloadLn = document.getElementById('downloadLink');
-      let parsedChapters = [], selectedFile=null;
+    /* ---- EPUB Splitter Logic (with offset) ---- */
+    document.addEventListener('DOMContentLoaded', () => {
+      const uploadInput   = document.getElementById('epubUpload');
+      const fileNameEl    = document.getElementById('epubFileName');
+      const splitBtn      = document.getElementById('splitBtn');
+      const modeSelect    = document.getElementById('modeSelect');
+      const groupSizeGrp  = document.getElementById('groupSizeGroup');
+      const spinnerSpl    = document.getElementById('spinnerSplitter');
+      const statusEl      = document.getElementById('statusMessage');
+      const downloadSec   = document.querySelector('#splitterApp .download-section');
+      const downloadLink  = document.getElementById('downloadLink');
+      let selectedFile    = null;
 
-      // toggle group-size field
-      modeSelect.addEventListener('change',()=>{
-        grpSizeGrp.style.display = modeSelect.value==='grouped'?'block':'none';
-      });
-
-      // Switch between Offset vs Preview mode
-      document.querySelectorAll('input[name="selMode"]').forEach(rb=>{
-        rb.addEventListener('change',()=>{
-          if(rb.value==='preview' && rb.checked){
-            offsetGroup.style.display = 'none';
-            previewSec.style.display  = 'block';
-          } else if(rb.value==='offset' && rb.checked){
-            offsetGroup.style.display = 'block';
-            previewSec.style.display  = 'none';
-          }
-        });
-      });
-
-      // load file
-      epubInput.addEventListener('change',e=>{
+      uploadInput.addEventListener('change', e => {
         selectedFile = e.target.files[0];
-        if(!selectedFile) return;
-        fileNameEl.textContent = `Selected: ${selectedFile.name}`;
-        splitBtn.disabled = false;
-        statusEl.style.display='none';
-        downloadSec.style.display='none';
-        chapterList.innerHTML=''; // clear
+        if (selectedFile) {
+          fileNameEl.textContent = `Selected: ${selectedFile.name}`;
+          splitBtn.disabled = false;
+          statusEl.style.display = 'none';
+          downloadSec.style.display = 'none';
+        }
+      });
+      modeSelect.addEventListener('change', () => {
+        groupSizeGrp.style.display = modeSelect.value === 'grouped' ? 'block' : 'none';
       });
 
-      splitBtn.addEventListener('click',()=>{
-        if(!selectedFile) return;
-        spinner.style.display='block';
-        statusEl.style.display='none';
-        downloadSec.style.display='none';
+      splitBtn.addEventListener('click', () => {
+        if (!selectedFile) return;
+        spinnerSpl.style.display = 'block';
+        statusEl.style.display   = 'none';
+        downloadSec.style.display= 'none';
 
+        // Read EPUB as ArrayBuffer
         readFileAsArrayBuffer(selectedFile)
-          .then(buf=>JSZip.loadAsync(buf))
-          .then(epub=>{
-            const struct={}, promises=[];
-            epub.forEach((path,f)=>{
-              struct[path]={dir:f.dir};
-              if(!f.dir&&/\.(xhtml|html)$/.test(path)||/toc\.ncx|content\.opf/.test(path)){
-                promises.push(f.async('text').then(txt=>struct[path].content=txt));
+          .then(buffer => JSZip.loadAsync(buffer))
+          .then(epub => {
+            const structure = {};
+            const promises = [];
+            epub.forEach((path, file) => {
+              structure[path] = { dir: file.dir, contentType: file.options.contentType };
+              if (!file.dir && (path.endsWith('.xhtml') || path.endsWith('.html') ||
+                                path.includes('content.opf') || path.includes('toc.ncx'))) {
+                promises.push(file.async('text').then(c => structure[path].content = c));
               }
             });
-            return Promise.all(promises).then(()=>struct);
+            return Promise.all(promises).then(() => structure);
           })
-          .then(struct=>{
-            const chaps=[];
-            Object.values(struct).forEach(info=>{
-              if(info.content){
-                let doc = new DOMParser().parseFromString(info.content,'text/xml');
-                if(doc.querySelector('parsererror')){
-                  doc=new DOMParser().parseFromString(info.content,'text/html');
+          .then(structure => {
+            const chapters = [];
+            for (let path in structure) {
+              const info = structure[path];
+              if (!info.dir && info.content) {
+                const parser = new DOMParser();
+                let doc = parser.parseFromString(info.content, 'text/xml');
+                if (doc.querySelector('parsererror')) {
+                  doc = parser.parseFromString(info.content, 'text/html');
                 }
-                const secs = doc.querySelectorAll(
-                  'section[epub\\:type="chapter"],div[epub\\:type="chapter"],section.chapter,div.chapter'
+                const sections = doc.querySelectorAll(
+                  'section[epub\\:type="chapter"], div[epub\\:type="chapter"], ' +
+                  'section.chapter, div.chapter, section[role="chapter"], div[role="chapter"]'
                 );
-                if(secs.length){
-                  secs.forEach(sec=>{
-                    sec.querySelectorAll('h1,h2,h3,.title,.chapter-title').forEach(el=>el.remove());
-                    const ps=sec.querySelectorAll('p'), text=ps.length
-                      ?Array.from(ps).map(p=>p.textContent.trim()).filter(t=>t).join('\n')
-                      :sec.textContent.replace(/\s*\n\s*/g,'\n').trim();
-                    if(text) chaps.push(text);
+                if (sections.length) {
+                  sections.forEach(sec => {
+                    sec.querySelectorAll('h1,h2,h3,.title,.chapter-title').forEach(el => el.remove());
+                    const paras = sec.querySelectorAll('p');
+                    const text = paras.length
+                      ? Array.from(paras).map(p => p.textContent.trim()).filter(t => t).join('\n')
+                      : sec.textContent.replace(/\s*\n\s*/g, '\n').trim();
+                    if (text) chapters.push(text);
                   });
+                } else {
+                  const headings = doc.querySelectorAll('h1,h2,h3');
+                  if (headings.length > 1) {
+                    for (let i = 0; i < headings.length; i++) {
+                      let node = headings[i].nextSibling, content = '';
+                      while (node && !(node.nodeType === 1 && /H[1-3]/.test(node.tagName))) {
+                        content += node.nodeType === 1 ? node.textContent + '\n' : node.textContent;
+                        node = node.nextSibling;
+                      }
+                      content = content.replace(/\n{3,}/g, '\n').trim();
+                      if (content) chapters.push(content);
+                    }
+                  }
                 }
-              }
-            });
-            parsedChapters = chaps;
-            // populate preview list
-            chapterList.innerHTML = parsedChapters.map((t,i)=>
-              `<li>
-                 <label>
-                   <input type="checkbox" data-index="${i}">
-                   Chapter ${i+1}: ${t.slice(0,50).replace(/\n/g,' ')}...
-                 </label>
-               </li>`
-            ).join('');
-            return parsedChapters;
-          })
-          .then(chapters=>{
-            if(!chapters.length) throw new Error('No chapters found.');
-            // read parameters
-            const pattern  = document.getElementById('chapterPattern').value.trim()||'chapter';
-            const startNum = parseInt(document.getElementById('startNumber').value,10)||1;
-            const offset   = Math.max(0, parseInt(document.getElementById('offsetNumber').value,10)||0);
-            const mode     = modeSelect.value;
-            const selMode  = document.querySelector('input[name="selMode"]:checked').value;
-            let usable=[];
-            let effectiveStart = startNum;
-
-            if(selMode==='offset'){
-              usable = chapters.slice(offset);
-              effectiveStart += offset;
-            } else {
-              // Preview & Range
-              const range = document.getElementById('rangeInput').value.trim();
-              if(range.match(/^\d+\s*-\s*\d+$/)){
-                let [s,e]=range.split('-').map(x=>parseInt(x,10));
-                s=Math.max(1,s); e=Math.min(chapters.length,e);
-                for(let i=s-1;i<e;i++) usable.push(chapters[i]);
-                effectiveStart = s;
-              } else {
-                document.querySelectorAll('#chapterList input[type=checkbox]:checked')
-                  .forEach(cb=>usable.push(chapters[cb.dataset.index]));
-                // for checked we preserve original order, numbering by original index+1
               }
             }
+            return chapters;
+          })
+          .then(chapters => {
+            if (!chapters.length) throw new Error('No chapters found. Check EPUB structure.');
 
-            const zip=new JSZip();
-            if(mode==='single'){
-              usable.forEach((text,i)=>{
-                const num = String(effectiveStart + i).padStart(2,'0');
-                zip.file(`${pattern}${num}.txt`,text);
+            // NEW: read offset
+            const pattern     = document.getElementById('chapterPattern').value.trim() || 'chapter';
+            const startNumber = parseInt(document.getElementById('startNumber').value, 10) || 1;
+            const offset      = Math.max(0, parseInt(document.getElementById('offsetNumber').value, 10) || 0);
+            const mode        = modeSelect.value;
+
+            // apply offset
+            const usableChaps    = chapters.slice(offset);
+            const effectiveStart = startNumber + offset;
+
+            const zip = new JSZip();
+
+            if (mode === 'single') {
+              usableChaps.forEach((text, i) => {
+                const chapNum = String(effectiveStart + i).padStart(2, '0');
+                zip.file(`${pattern}${chapNum}.txt`, text);
               });
             } else {
-              const gsz = parseInt(document.getElementById('groupSize').value,10)||1;
-              for(let i=0;i<usable.length;i+=gsz){
-                const gs = effectiveStart + i;
-                const ge = Math.min(effectiveStart+i+gsz-1,effectiveStart+usable.length-1);
-                const name = gs===ge
-                  ?`${pattern} C${String(gs).padStart(2,'0')}.txt`
-                  :`${pattern} C${String(gs).padStart(2,'0')}-${String(ge).padStart(2,'0')}.txt`;
-                let content='';
-                for(let j=0;j<gsz && i+j<usable.length;j++){
-                  if(j>0) content+='\n---------------- END ----------------\n';
-                  content+=usable[i+j];
+              let groupSize = parseInt(document.getElementById('groupSize').value, 10) || 1;
+              for (let i = 0; i < usableChaps.length; i += groupSize) {
+                const groupStart = effectiveStart + i;
+                const groupEnd = Math.min(
+                  effectiveStart + i + groupSize - 1,
+                  effectiveStart + usableChaps.length - 1
+                );
+                const name = groupStart === groupEnd
+                  ? `${pattern} C${String(groupStart).padStart(2,'0')}.txt`
+                  : `${pattern} C${String(groupStart).padStart(2,'0')}-` +
+                    `${String(groupEnd).padStart(2,'0')}.txt`;
+
+                let content = '';
+                for (let j = 0; j < groupSize && (i + j) < usableChaps.length; j++) {
+                  if (j > 0) content += '\n---------------- END ----------------\n';
+                  content += usableChaps[i + j];
                 }
-                zip.file(name,content);
+                zip.file(name, content);
               }
             }
-            return zip.generateAsync({type:'blob'})
-                      .then(blob=>({blob,count:usable.length}));
+
+            return zip.generateAsync({ type: 'blob' })
+                      .then(blob => ({ blob, count: usableChaps.length, skipped: offset }));
           })
-          .then(({blob,count})=>{
-            downloadLn.href     = URL.createObjectURL(blob);
-            downloadLn.download = `${document.getElementById('chapterPattern').value||'chapter'}_chapters.zip`;
-            downloadSec.style.display='block';
-            statusEl.textContent = `Extracted ${count} chapters.`;
-            statusEl.className   ='status success';
-            statusEl.style.display='block';
+          .then(({ blob, count, skipped }) => {
+            downloadLink.href     = URL.createObjectURL(blob);
+            downloadLink.download = `${document.getElementById('chapterPattern').value || 'chapter'}_chapters.zip`;
+            downloadSec.style.display = 'block';
+            statusEl.textContent = `Extracted ${count} chapters (skipped ${skipped})`;
+            statusEl.className   = 'status success';
+            statusEl.style.display = 'block';
           })
-          .catch(err=>{
+          .catch(err => {
             statusEl.textContent = `Error: ${err.message}`;
-            statusEl.className   ='status error';
-            statusEl.style.display='block';
+            statusEl.className   = 'status error';
+            statusEl.style.display = 'block';
           })
-          .finally(()=>{ spinner.style.display='none'; });
+          .finally(() => { spinnerSpl.style.display = 'none'; });
       });
 
-      function readFileAsArrayBuffer(file){
-        return new Promise((res,rej)=>{
-          const r=new FileReader();
-          r.onload=()=>res(r.result);
-          r.onerror=()=>rej(new Error('Failed to read file'));
+      function readFileAsArrayBuffer(file) {
+        return new Promise((res, rej) => {
+          const r = new FileReader();
+          r.onload  = () => res(r.result);
+          r.onerror = () => rej(new Error('Failed to read file'));
           r.readAsArrayBuffer(file);
         });
       }
