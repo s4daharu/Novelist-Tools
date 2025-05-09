@@ -203,6 +203,7 @@
         <label for="operationSelect">Select Operation:</label>
         <select id="operationSelect">
           <option value="create">Create New Backup File</option>
+          <option value="createFromZip">Create Backup from ZIP</option>
           <option value="extend">Extend Existing Backup File</option>
           <option value="merge">Merge Backup Files</option>
           <option value="findReplace">Find &amp; Replace</option>
@@ -233,6 +234,32 @@
           <option value="false">False</option>
         </select>
         <button id="createBtn" class="btn btn-primary">Generate and Download</button>
+      </div>
+
+      <!-- Create from ZIP -->
+      <div id="createFromZipSection" class="operation-section" style="display:none;">
+        <h2>Create Backup from ZIP File</h2>
+        <label for="zipBackupFile">Upload ZIP File (.zip containing .txt chapters):</label>
+        <input type="file" id="zipBackupFile" accept=".zip">
+
+        <label for="zipProjectTitle">Project Title:</label>
+        <input type="text" id="zipProjectTitle" placeholder="Enter project title">
+        <label for="zipDescription">Description:</label>
+        <textarea id="zipDescription" placeholder="Enter project description"></textarea>
+        <label for="zipUniqueCode">Unique Code (Optional):</label>
+        <input type="text" id="zipUniqueCode" placeholder="Leave blank to generate automatically">
+        
+        <label for="zipCreateTOC">Show Table of Contents:</label>
+        <select id="zipCreateTOC">
+          <option value="true">True</option>
+          <option value="false">False</option>
+        </select>
+        <label for="zipCreateIndentation">Automatic Indentation:</label>
+        <select id="zipCreateIndentation">
+          <option value="true">True</option>
+          <option value="false">False</option>
+        </select>
+        <button id="createFromZipBtn" class="btn btn-primary">Generate Backup and Download</button>
       </div>
 
       <!-- Extend -->
@@ -511,9 +538,11 @@
 
       const opSelect = document.getElementById('operationSelect');
       opSelect.addEventListener('change', () => {
-        ['create','extend','merge','findReplace'].forEach(op => {
-          document.getElementById(op + 'Section').style.display =
-            opSelect.value === op ? 'block' : 'none';
+        ['create', 'createFromZip', 'extend', 'merge', 'findReplace'].forEach(op => {
+          const sectionElement = document.getElementById(op + 'Section');
+          if (sectionElement) { 
+            sectionElement.style.display = opSelect.value === op ? 'block' : 'none';
+          }
         });
       });
 
@@ -581,6 +610,136 @@
           setSpinner(false);
         }
       });
+
+      // Create Backup from ZIP
+      document.getElementById('createFromZipBtn').addEventListener('click', async () => {
+        setSpinner(true);
+        const zipFileInput = document.getElementById('zipBackupFile');
+        const projectTitle = document.getElementById('zipProjectTitle').value;
+        const description = document.getElementById('zipDescription').value;
+        const uniqueCodeInput = document.getElementById('zipUniqueCode').value.trim();
+        const showTOC = document.getElementById('zipCreateTOC').value === 'true';
+        const autoIndent = document.getElementById('zipCreateIndentation').value === 'true';
+
+        if (!zipFileInput.files.length) {
+          showToast('Please upload a ZIP file.', true);
+          setSpinner(false);
+          return;
+        }
+        if (!projectTitle || !description) {
+            showToast('Project Title and Description are required.', true);
+            setSpinner(false);
+            return;
+        }
+
+        const file = zipFileInput.files[0];
+
+        try {
+          const zip = await JSZip.loadAsync(file);
+          const scenes = [];
+          const sections = [];
+          let chapterCounter = 0; 
+          const chapterFilePromises = [];
+
+          zip.forEach((relativePath, zipEntry) => {
+            if (!zipEntry.dir && zipEntry.name.toLowerCase().endsWith('.txt')) {
+              chapterFilePromises.push(
+                zipEntry.async('string').then(text => {
+                  return { name: zipEntry.name, text: text };
+                })
+              );
+            }
+          });
+
+          const chapterFiles = await Promise.all(chapterFilePromises);
+          chapterFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true, sensitivity: 'base'}));
+
+          for (const chapterFile of chapterFiles) {
+            chapterCounter++;
+            const chapterTitle = chapterFile.name.replace(/\.txt$/i, '');
+            const sceneText = JSON.stringify({ blocks: [{ type: 'text', align: 'left', text: chapterFile.text }] });
+
+            scenes.push({
+              code: `scene${chapterCounter}`,
+              title: chapterTitle,
+              text: sceneText,
+              ranking: chapterCounter,
+              status: '1'
+            });
+
+            sections.push({
+              code: `section${chapterCounter}`,
+              title: chapterTitle,
+              synopsis: '', 
+              ranking: chapterCounter,
+              section_scenes: [{ code: `scene${chapterCounter}`, ranking: 1 }]
+            });
+          }
+
+          if (scenes.length === 0) {
+            throw new Error('No .txt files found in the ZIP archive.');
+          }
+
+          const uniqueCode = uniqueCodeInput || Math.floor(Math.random() * 0xFFFFFFFF).toString(16).padStart(8, '0');
+          const now = Date.now();
+
+          let totalWordCount = 0;
+          scenes.forEach(scene => {
+              try {
+                  const sceneContent = JSON.parse(scene.text);
+                  const textBlock = sceneContent.blocks.find(b => b.type === 'text' && typeof b.text === 'string');
+                  if (textBlock && textBlock.text.trim()) {
+                      totalWordCount += textBlock.text.trim().split(/\s+/).length;
+                  }
+              } catch (e) {
+                  console.warn("Could not parse scene text for word count:", e);
+              }
+          });
+
+          const backupData = {
+            version: 4,
+            code: uniqueCode,
+            title: projectTitle,
+            description: description,
+            show_table_of_contents: showTOC,
+            apply_automatic_indentation: autoIndent,
+            last_update_date: now,
+            last_backup_date: now,
+            revisions: [{
+              number: 1,
+              date: now,
+              book_progresses: [{
+                year: new Date().getFullYear(),
+                month: new Date().getMonth() + 1,
+                day: new Date().getDate(),
+                word_count: totalWordCount
+              }],
+              statuses: [{ code: '1', title: 'Todo', color: -2697255, ranking: 1 }],
+              scenes,
+              sections
+            }]
+          };
+
+          const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const safeFileName = projectTitle.replace(/[^a-z0-9_\-\s]/gi, '_').replace(/\s+/g, '_');
+          a.download = `${safeFileName || 'backup_from_zip'}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast(`Backup file created with ${scenes.length} chapter(s).`);
+
+        } catch (err) {
+          showToast(`Error: ${err.message}`, true);
+          console.error("Error creating backup from ZIP:", err);
+        } finally {
+          setSpinner(false);
+        }
+      });
+
 
       // Extend existing backup
       document.getElementById('extendBtn').addEventListener('click', () => {
