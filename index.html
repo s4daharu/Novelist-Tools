@@ -658,37 +658,42 @@
             chapterCounter++;
             const chapterTitle = chapterFile.name.replace(/\.txt$/i, '');
             
-            // === START OF NEW MULTI-BLOCK LOGIC ===
-            const rawChapterText = chapterFile.text;
-            const paragraphs = rawChapterText.split(/(?:\r\n|\r|\n)\s*(?:\r\n|\r|\n)+/);
+              const rawChapterText = chapterFile.text;
+
+            // Normalize newlines to \n first
+            const normalizedText = rawChapterText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+            const contentSegments = normalizedText.split(/\n{2,}/)
+                                            .map(s => s.trim()) 
+                                            .filter(s => s !== ''); 
 
             const blocks = [];
-            for (const p of paragraphs) {
-                const trimmedParagraph = p.trim(); 
+            for (let i = 0; i < contentSegments.length; i++) {
+                const segmentText = contentSegments[i];
+                blocks.push({ type: 'text', align: 'left', text: segmentText });
+                blocks.push({ type: 'text', align: 'left' }); // Add spacer after each text block
+            }
 
-                if (trimmedParagraph !== '') {
-                    blocks.push({ type: 'text', align: 'left', text: trimmedParagraph });
-                } else {
-                    if (p === '') { 
-                         blocks.push({ type: 'text', align: 'left' }); 
-                    }
+            if (contentSegments.length === 0) { // If .txt was empty or only blank lines
+                if (rawChapterText.trim() === '' && rawChapterText.length > 0) { 
+                    blocks.push({ type: 'text', align: 'left' }); // .txt had only newlines/whitespace
+                } else if (rawChapterText.trim() === '') { 
+                     blocks.push({ type: 'text', align: 'left', text: '' }); // .txt was truly empty
                 }
             }
+            // Optional: If you are certain Qt_corrected.json's double spacer at the end of scene 1
+            // is a rule for ALL chapters, and not due to extra newlines in that specific source txt:
+            // else if (blocks.length > 0 && !blocks[blocks.length - 1].hasOwnProperty('text')) {
+            //    // Last block is already a spacer. To get Text, Spacer, Spacer at the end:
+            //    blocks.push({ type: 'text', align: 'left' });
+            // }
             
-            while (blocks.length > 1 && blocks[0].type === 'text' && blocks[0].align === 'left' && !blocks[0].hasOwnProperty('text')) {
-                blocks.shift();
-            }
-
-            while (blocks.length > 1 && blocks[blocks.length - 1].type === 'text' && blocks[blocks.length - 1].align === 'left' && !blocks[blocks.length - 1].hasOwnProperty('text')) {
-                blocks.pop();
-            }
-            
+            // Final safeguard: if blocks is still empty
             if (blocks.length === 0) {
                 blocks.push({ type: 'text', align: 'left', text: '' });
             }
 
             const sceneText = JSON.stringify({ blocks: blocks });
-            // === END OF NEW MULTI-BLOCK LOGIC ===
 
             scenes.push({
               code: `scene${chapterCounter}`,
@@ -729,7 +734,7 @@
               }
           });
 
-          
+
           const backupData = {
             version: 4,
             code: uniqueCode,
