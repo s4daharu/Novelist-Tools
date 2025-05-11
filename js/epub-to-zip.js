@@ -523,7 +523,7 @@ export function initializeEpubToZip(showAppToast, toggleAppSpinner) {
                 const chapterText = extractTextFromHtml(chapterHtml);
 
                 if (chapterText && chapterText.trim().length > 0) {
-                    const txtFilename = `chapter-${chapterIndex}_${sanitizeFilenameForZip(entry.title.substring(0,20))}.txt`;
+                    const txtFilename = `C${chapterIndex}.txt`; 
                     outputZip.file(txtFilename, chapterText);
                     filesAdded++;
                 } else {
@@ -537,7 +537,7 @@ export function initializeEpubToZip(showAppToast, toggleAppSpinner) {
                 const zipBlob = await outputZip.generateAsync({ type: "blob", compression: "DEFLATE" });
                 
                 const downloadFilenameBase = currentEpubFilename.replace(/\.epub$/i, '') || 'epub_content';
-                triggerBrowserDownload(zipBlob, `${sanitizeFilenameForZip(downloadFilenameBase)}_chapters.zip`);
+                triggerBrowserDownload(zipBlob, `${sanitizeFilenameForZip(downloadFilenameBase)}.zip`);
                 
                 updateLocalStatus(`Download started (${filesAdded}/${totalChapters} chapters).`);
                 if (downloadSec && downloadLink) { // Show download link (though direct trigger is used)
