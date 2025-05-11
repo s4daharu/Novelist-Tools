@@ -4,15 +4,18 @@ export function toggleMenu() {
     document.getElementById('sidebar').classList.toggle('open');
 }
 
+// js/ui-helpers.js
 export function switchApp(app) {
     document.getElementById('splitterApp').style.display = app === 'splitter' ? 'block' : 'none';
     document.getElementById('backupApp').style.display = app === 'backup' ? 'block' : 'none';
-    document.getElementById('zipToEpubApp').style.display = app === 'zipToEpub' ? 'block' : 'none'; // NEW
+    document.getElementById('zipToEpubApp').style.display = app === 'zipToEpub' ? 'block' : 'none';
+    document.getElementById('epubToZipApp').style.display = app === 'epubToZip' ? 'block' : 'none'; // NEW
 
     let titleText = 'Novelist Tools';
     if (app === 'splitter') titleText = 'EPUB Chapter Splitter';
     else if (app === 'backup') titleText = 'Novel Backup File Utility';
-    else if (app === 'zipToEpub') titleText = 'ZIP to EPUB Converter'; // NEW
+    else if (app === 'zipToEpub') titleText = 'ZIP to EPUB Converter';
+    else if (app === 'epubToZip') titleText = 'EPUB to ZIP (TXT)'; // NEW
 
     document.getElementById('appTitle').textContent = titleText;
     toggleMenu();
