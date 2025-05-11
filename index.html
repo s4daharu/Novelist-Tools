@@ -611,7 +611,7 @@
         }
       });
 
-      // Create Backup from ZIP
+       // Create Backup from ZIP
       document.getElementById('createFromZipBtn').addEventListener('click', async () => {
         setSpinner(true);
         const zipFileInput = document.getElementById('zipBackupFile');
@@ -657,7 +657,38 @@
           for (const chapterFile of chapterFiles) {
             chapterCounter++;
             const chapterTitle = chapterFile.name.replace(/\.txt$/i, '');
-            const sceneText = JSON.stringify({ blocks: [{ type: 'text', align: 'left', text: chapterFile.text }] });
+            
+            // === START OF NEW MULTI-BLOCK LOGIC ===
+            const rawChapterText = chapterFile.text;
+            const paragraphs = rawChapterText.split(/(?:\r\n|\r|\n)\s*(?:\r\n|\r|\n)+/);
+
+            const blocks = [];
+            for (const p of paragraphs) {
+                const trimmedParagraph = p.trim(); 
+
+                if (trimmedParagraph !== '') {
+                    blocks.push({ type: 'text', align: 'left', text: trimmedParagraph });
+                } else {
+                    if (p === '') { 
+                         blocks.push({ type: 'text', align: 'left' }); 
+                    }
+                }
+            }
+            
+            while (blocks.length > 1 && blocks[0].type === 'text' && blocks[0].align === 'left' && !blocks[0].hasOwnProperty('text')) {
+                blocks.shift();
+            }
+
+            while (blocks.length > 1 && blocks[blocks.length - 1].type === 'text' && blocks[blocks.length - 1].align === 'left' && !blocks[blocks.length - 1].hasOwnProperty('text')) {
+                blocks.pop();
+            }
+            
+            if (blocks.length === 0) {
+                blocks.push({ type: 'text', align: 'left', text: '' });
+            }
+
+            const sceneText = JSON.stringify({ blocks: blocks });
+            // === END OF NEW MULTI-BLOCK LOGIC ===
 
             scenes.push({
               code: `scene${chapterCounter}`,
@@ -683,19 +714,22 @@
           const uniqueCode = uniqueCodeInput || Math.floor(Math.random() * 0xFFFFFFFF).toString(16).padStart(8, '0');
           const now = Date.now();
 
-          let totalWordCount = 0;
+                    let totalWordCount = 0;
           scenes.forEach(scene => {
               try {
                   const sceneContent = JSON.parse(scene.text);
-                  const textBlock = sceneContent.blocks.find(b => b.type === 'text' && typeof b.text === 'string');
-                  if (textBlock && textBlock.text.trim()) {
-                      totalWordCount += textBlock.text.trim().split(/\s+/).length;
-                  }
+                  // Iterate over all blocks to sum word counts
+                  sceneContent.blocks.forEach(block => {
+                      if (block.type === 'text' && typeof block.text === 'string' && block.text.trim()) {
+                          totalWordCount += block.text.trim().split(/\s+/).length;
+                      }
+                  });
               } catch (e) {
                   console.warn("Could not parse scene text for word count:", e);
               }
           });
 
+          
           const backupData = {
             version: 4,
             code: uniqueCode,
@@ -739,7 +773,6 @@
           setSpinner(false);
         }
       });
-
 
       // Extend existing backup
       document.getElementById('extendBtn').addEventListener('click', () => {
