@@ -1,3 +1,4 @@
+/* ==== START 3/10 - epub-splitter.js (Novelist-Tools-main/js/epub-splitter.js) ==== */
 // js/epub-splitter.js
 
 // Helper function (can be kept local or moved to a utils.js if used elsewhere)
@@ -67,6 +68,7 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
                     structure[path] = { dir: file.dir, contentType: file.options.contentType, content: null }; // Initialize content
                     if (!file.dir && (path.toLowerCase().endsWith('.xhtml') || path.toLowerCase().endsWith('.html') ||
                                         path.toLowerCase().includes('content.opf') || path.toLowerCase().includes('toc.ncx'))) {
+                        // MODIFICATION START: Read as uint8array and decode as UTF-8
                         promises.push(
                             file.async('uint8array').then(bytes => {
                                 try {
@@ -83,6 +85,7 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
                                 showAppToast(`Error reading file '${path}' from EPUB.`, true);
                             })
                         );
+                        // MODIFICATION END
                     }
                 });
                 return Promise.all(promises).then(() => structure);
@@ -93,85 +96,37 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
                     const info = structure[path];
                     // Ensure content is not null and is a string before proceeding
                     if (!info.dir && typeof info.content === 'string' && info.content.length > 0) {
+                         // Only process .xhtml and .html files for chapter content here
                         if (path.toLowerCase().endsWith('.xhtml') || path.toLowerCase().endsWith('.html')) {
                             const parser = new DOMParser();
-                            let doc;
-                            // Try parsing as XML (XHTML) first
-                            doc = parser.parseFromString(info.content, 'application/xml');
-                            const parserError = doc.querySelector('parsererror');
-                            if (parserError) {
-                                console.warn(`XML parsing error in ${path}, falling back to HTML parser:`, parserError.textContent);
-                                // Fallback to HTML parser if XML parsing fails (common for malformed XHTML)
+                            let doc = parser.parseFromString(info.content, 'text/xml'); // Try as XML (XHTML) first
+                            if (doc.querySelector('parsererror')) { // If XML parsing fails, try as HTML
                                 doc = parser.parseFromString(info.content, 'text/html');
                             }
-
-                            if (!doc) {
-                                console.warn(`Could not parse ${path}. Skipping.`);
-                                continue;
-                            }
-
-                            // Attempt to find chapter-like sections
-                            // Prioritize epub:type attributes as they are more semantic
-                            let sections = doc.querySelectorAll(
+                            const sections = doc.querySelectorAll(
                                 'section[epub\\:type="chapter"], div[epub\\:type="chapter"], ' +
-                                'article[epub\\:type="chapter"]' // Added article
+                                'section.chapter, div.chapter, section[role="chapter"], div[role="chapter"]'
                             );
-
-                            if (!sections.length) {
-                                // Fallback to common class names or general structure if no epub:type
-                                sections = doc.querySelectorAll(
-                                    'section.chapter, div.chapter, article.chapter, ' + // Common class names
-                                    'section[role="doc-chapter"], div[role="doc-chapter"], article[role="doc-chapter"]' // ARIA roles
-                                );
-                            }
-
                             if (sections.length) {
                                 sections.forEach(sec => {
-                                    // Clone the section to avoid modifying the original DOM during iteration
-                                    const tempSec = sec.cloneNode(true);
-                                    // Remove known heading elements to avoid them being duplicated in text content
-                                    tempSec.querySelectorAll('h1,h2,h3,h4,h5,h6,.title,.chapter-title').forEach(el => el.remove());
-
-                                    // Extract text, trying to preserve some structure by joining paragraphs
-                                    const paragraphs = tempSec.querySelectorAll('p');
-                                    let textContent;
-                                    if (paragraphs.length > 0) {
-                                        textContent = Array.from(paragraphs)
-                                            .map(p => p.textContent.trim())
-                                            .filter(t => t) // Remove empty paragraphs
-                                            .join('\n\n'); // Join paragraphs with double newline
-                                    } else {
-                                        // Fallback for sections without <p> tags
-                                        textContent = tempSec.textContent.replace(/\s*\n\s*/g, '\n').trim();
-                                    }
-                                    if (textContent) chapters.push(textContent);
+                                    sec.querySelectorAll('h1,h2,h3,.title,.chapter-title').forEach(el => el.remove());
+                                    const paras = sec.querySelectorAll('p');
+                                    const text = paras.length ?
+                                        Array.from(paras).map(p => p.textContent.trim()).filter(t => t).join('\n') :
+                                        sec.textContent.replace(/\s*\n\s*/g, '\n').trim();
+                                    if (text) chapters.push(text);
                                 });
-                            } else if (path.toLowerCase().endsWith('.xhtml') || path.toLowerCase().endsWith('.html')) {
-                                // More generic fallback if no sections are found: look for body content or headings.
-                                // This is less reliable for "chapters" but might grab content.
-                                const body = doc.body;
-                                if (body) {
-                                    // Try extracting from headings if multiple are present (indicative of structure)
-                                    const headings = body.querySelectorAll('h1, h2, h3, h4'); // Common heading levels
-                                    if (headings.length > 1) {
-                                        for (let i = 0; i < headings.length; i++) {
-                                            let node = headings[i].nextSibling;
-                                            let contentBetweenHeadings = '';
-                                            while (node && !(node.nodeType === 1 && /H[1-4]/.test(node.tagName.toUpperCase()))) {
-                                                if (node.textContent) {
-                                                    contentBetweenHeadings += node.textContent + '\n';
-                                                }
-                                                node = node.nextSibling;
-                                            }
-                                            contentBetweenHeadings = contentBetweenHeadings.replace(/\n{2,}/g, '\n').trim(); // Normalize newlines
-                                            if (contentBetweenHeadings) chapters.push(contentBetweenHeadings);
+                            } else {
+                                const headings = doc.querySelectorAll('h1,h2,h3');
+                                if (headings.length > 1) {
+                                    for (let i = 0; i < headings.length; i++) {
+                                        let node = headings[i].nextSibling, content = '';
+                                        while (node && !(node.nodeType === 1 && /H[1-3]/.test(node.tagName))) {
+                                            content += node.nodeType === 1 ? node.textContent + '\n' : node.textContent;
+                                            node = node.nextSibling;
                                         }
-                                    } else if (body.textContent.trim()) {
-                                        // If no clear structure, take the whole body text of the file, cleaned up.
-                                        // This might grab non-chapter files if they are XHTML/HTML.
-                                        // A more sophisticated filter might be needed based on manifest item properties.
-                                        let fullBodyText = body.textContent.replace(/\s*\n\s*/g, '\n').trim();
-                                        if (fullBodyText) chapters.push(fullBodyText);
+                                        content = content.replace(/\n{3,}/g, '\n').trim();
+                                        if (content) chapters.push(content);
                                     }
                                 }
                             }
@@ -181,64 +136,60 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
                 return chapters;
             })
             .then(chapters => {
-                if (!chapters.length) throw new Error('No chapters found. Check EPUB structure or content parsing logic.');
+                if (!chapters.length) throw new Error('No chapters found. Check EPUB structure.');
 
-                const pattern = (document.getElementById('chapterPattern').value.trim() || 'chapter').replace(/[^\w\s-]/g, ''); // Sanitize pattern
-                const startNumber = parseInt(document.getElementById('startNumber').value, 10) || 1;
-                const offset = Math.max(0, parseInt(document.getElementById('offsetNumber').value, 10) || 0);
-                const mode = document.getElementById('modeSelect').value;
+                const pattern = chapterPatternEl.value.trim() || 'chapter';
+                const startNumber = parseInt(startNumberEl.value, 10) || 1;
+                const offset = Math.max(0, parseInt(offsetNumberEl.value, 10) || 0);
+                const mode = modeSelect.value;
 
                 const usableChaps = chapters.slice(offset);
-                if (usableChaps.length === 0 && chapters.length > 0) {
-                    throw new Error(`Offset (${offset}) is too large, no chapters remaining to process (total found: ${chapters.length}).`);
-                }
-                const effectiveStart = startNumber; // Start numbering from user input, not affected by offset visually
+                const effectiveStart = startNumber + offset; // Original logic for effectiveStart
 
                 const zip = new JSZip();
 
                 if (mode === 'single') {
                     usableChaps.forEach((text, i) => {
-                        const chapNum = String(effectiveStart + i).padStart(3, '0'); // Pad to 3 digits for better sorting
-                        zip.file(`${pattern}_${chapNum}.txt`, text);
+                        const chapNum = String(effectiveStart + i).padStart(2, '0');
+                        zip.file(`${pattern}${chapNum}.txt`, text);
                     });
                 } else { // grouped
-                    let groupSize = parseInt(document.getElementById('groupSize').value, 10) || 1;
-                    if (groupSize < 1) groupSize = 1;
+                    let groupSize = parseInt(groupSizeEl.value, 10) || 1;
+                    if (groupSize < 1) groupSize = 1; // Ensure group size is at least 1
 
                     for (let i = 0; i < usableChaps.length; i += groupSize) {
-                        const groupStartNum = effectiveStart + i;
-                        const groupEndNum = Math.min(
+                        const groupStart = effectiveStart + i;
+                        const groupEnd = Math.min(
                             effectiveStart + i + groupSize - 1,
                             effectiveStart + usableChaps.length - 1
                         );
-                        const groupFileName = groupStartNum === groupEndNum ?
-                            `${pattern}_C${String(groupStartNum).padStart(3, '0')}.txt` :
-                            `${pattern}_C${String(groupStartNum).padStart(3, '0')}-C${String(groupEndNum).padStart(3, '0')}.txt`;
+                        const name = groupStart === groupEnd ?
+                            `${pattern} C${String(groupStart).padStart(2, '0')}.txt` :
+                            `${pattern} C${String(groupStart).padStart(2, '0')}-${String(groupEnd).padStart(2, '0')}.txt`;
 
                         let content = '';
                         for (let j = 0; j < groupSize && (i + j) < usableChaps.length; j++) {
-                            if (j > 0) content += '\n\n\n<!-- ebook_divider -->\n\n\n'; // Clearer divider
+                            if (j > 0) content += '\n\n\n---------------- END ----------------\n\n\n';
                             content += usableChaps[i + j];
                         }
-                        zip.file(groupFileName, content);
+                        zip.file(name, content);
                     }
                 }
                 return zip.generateAsync({ type: 'blob' })
-                    .then(blob => ({ blob, count: usableChaps.length, skipped: offset, originalFound: chapters.length }));
+                    .then(blob => ({ blob, count: usableChaps.length, skipped: offset }));
             })
-            .then(({ blob, count, skipped, originalFound }) => {
+            .then(({ blob, count, skipped }) => {
                 if (downloadLink) {
                     downloadLink.href = URL.createObjectURL(blob);
-                    const safePattern = (document.getElementById('chapterPattern').value.trim() || 'chapters').replace(/[^\w\s-]/g, '');
-                    downloadLink.download = `${safePattern}_split.zip`;
+                    downloadLink.download = `${(chapterPatternEl.value || 'chapter').replace(/[^\w\s-]/g, '')}_chapters.zip`;
                 }
                 if (downloadSec) downloadSec.style.display = 'block';
                 if (statusEl) {
-                    statusEl.textContent = `Extracted ${count} chapter(s) (skipped ${skipped} from ${originalFound} potential content blocks).`;
+                    statusEl.textContent = `Extracted ${count} chapters (skipped ${skipped})`;
                     statusEl.className = 'status success'; // Assuming you have CSS for .success / .error
                     statusEl.style.display = 'block';
                 }
-                showAppToast(`Extracted ${count} chapter(s).`);
+                showAppToast(`Extracted ${count} chapters (skipped ${skipped})`);
             })
             .catch(err => {
                 console.error("EPUB Splitter Error:", err);
@@ -247,7 +198,7 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
                     statusEl.className = 'status error';
                     statusEl.style.display = 'block';
                 }
-                showAppToast(`Splitter Error: ${err.message}`, true);
+                showAppToast(`Error: ${err.message}`, true);
             })
             .finally(() => {
                 toggleAppSpinner(false); // Hide spinner
