@@ -1,4 +1,3 @@
-/* ==== START 3/10 - epub-splitter.js (Novelist-Tools-main/js/epub-splitter.js) ==== */
 // js/epub-splitter.js
 
 // Helper function (can be kept local or moved to a utils.js if used elsewhere)
@@ -49,7 +48,7 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
             showAppToast("No file selected for EPUB splitting.", true);
             return;
         }
-
+        
         toggleAppSpinner(true); // Show spinner
         if (statusEl) statusEl.style.display = 'none';
         if (downloadSec) downloadSec.style.display = 'none';
@@ -62,30 +61,18 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
         readFileAsArrayBuffer(selectedFile)
             .then(buffer => JSZip.loadAsync(buffer))
             .then(epub => {
+                // ... (Keep the entire EPUB parsing and chapter extraction logic here)
+                // ... from your original script, starting from:
+                // const structure = {};
+                // const promises = [];
+                // ... down to the end of this specific .then() block for chapter extraction
                 const structure = {};
                 const promises = [];
                 epub.forEach((path, file) => {
-                    structure[path] = { dir: file.dir, contentType: file.options.contentType, content: null }; // Initialize content
-                    if (!file.dir && (path.toLowerCase().endsWith('.xhtml') || path.toLowerCase().endsWith('.html') ||
-                                        path.toLowerCase().includes('content.opf') || path.toLowerCase().includes('toc.ncx'))) {
-                        // MODIFICATION START: Read as uint8array and decode as UTF-8
-                        promises.push(
-                            file.async('uint8array').then(bytes => {
-                                try {
-                                    const decoder = new TextDecoder('utf-8', { fatal: false }); // fatal:false will insert � for errors
-                                    structure[path].content = decoder.decode(bytes);
-                                } catch (e) {
-                                    console.error(`Error decoding file ${path} as UTF-8:`, e);
-                                    structure[path].content = ""; // Fallback to empty string if decoding fails
-                                    showAppToast(`Warning: Could not decode '${path}'. It may be corrupted or not UTF-8.`, true);
-                                }
-                            }).catch(err => {
-                                console.error(`Error reading file ${path} as uint8array:`, err);
-                                structure[path].content = ""; // Fallback
-                                showAppToast(`Error reading file '${path}' from EPUB.`, true);
-                            })
-                        );
-                        // MODIFICATION END
+                    structure[path] = { dir: file.dir, contentType: file.options.contentType };
+                    if (!file.dir && (path.endsWith('.xhtml') || path.endsWith('.html') ||
+                                        path.includes('content.opf') || path.includes('toc.ncx'))) {
+                        promises.push(file.async('text').then(c => structure[path].content = c));
                     }
                 });
                 return Promise.all(promises).then(() => structure);
@@ -94,40 +81,36 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
                 const chapters = [];
                 for (let path in structure) {
                     const info = structure[path];
-                    // Ensure content is not null and is a string before proceeding
-                    if (!info.dir && typeof info.content === 'string' && info.content.length > 0) {
-                         // Only process .xhtml and .html files for chapter content here
-                        if (path.toLowerCase().endsWith('.xhtml') || path.toLowerCase().endsWith('.html')) {
-                            const parser = new DOMParser();
-                            let doc = parser.parseFromString(info.content, 'text/xml'); // Try as XML (XHTML) first
-                            if (doc.querySelector('parsererror')) { // If XML parsing fails, try as HTML
-                                doc = parser.parseFromString(info.content, 'text/html');
-                            }
-                            const sections = doc.querySelectorAll(
-                                'section[epub\\:type="chapter"], div[epub\\:type="chapter"], ' +
-                                'section.chapter, div.chapter, section[role="chapter"], div[role="chapter"]'
-                            );
-                            if (sections.length) {
-                                sections.forEach(sec => {
-                                    sec.querySelectorAll('h1,h2,h3,.title,.chapter-title').forEach(el => el.remove());
-                                    const paras = sec.querySelectorAll('p');
-                                    const text = paras.length ?
-                                        Array.from(paras).map(p => p.textContent.trim()).filter(t => t).join('\n') :
-                                        sec.textContent.replace(/\s*\n\s*/g, '\n').trim();
-                                    if (text) chapters.push(text);
-                                });
-                            } else {
-                                const headings = doc.querySelectorAll('h1,h2,h3');
-                                if (headings.length > 1) {
-                                    for (let i = 0; i < headings.length; i++) {
-                                        let node = headings[i].nextSibling, content = '';
-                                        while (node && !(node.nodeType === 1 && /H[1-3]/.test(node.tagName))) {
-                                            content += node.nodeType === 1 ? node.textContent + '\n' : node.textContent;
-                                            node = node.nextSibling;
-                                        }
-                                        content = content.replace(/\n{3,}/g, '\n').trim();
-                                        if (content) chapters.push(content);
+                    if (!info.dir && info.content) {
+                        const parser = new DOMParser();
+                        let doc = parser.parseFromString(info.content, 'text/xml');
+                        if (doc.querySelector('parsererror')) {
+                            doc = parser.parseFromString(info.content, 'text/html');
+                        }
+                        const sections = doc.querySelectorAll(
+                            'section[epub\\:type="chapter"], div[epub\\:type="chapter"], ' +
+                            'section.chapter, div.chapter, section[role="chapter"], div[role="chapter"]'
+                        );
+                        if (sections.length) {
+                            sections.forEach(sec => {
+                                sec.querySelectorAll('h1,h2,h3,.title,.chapter-title').forEach(el => el.remove());
+                                const paras = sec.querySelectorAll('p');
+                                const text = paras.length ?
+                                    Array.from(paras).map(p => p.textContent.trim()).filter(t => t).join('\n') :
+                                    sec.textContent.replace(/\s*\n\s*/g, '\n').trim();
+                                if (text) chapters.push(text);
+                            });
+                        } else {
+                            const headings = doc.querySelectorAll('h1,h2,h3');
+                            if (headings.length > 1) {
+                                for (let i = 0; i < headings.length; i++) {
+                                    let node = headings[i].nextSibling, content = '';
+                                    while (node && !(node.nodeType === 1 && /H[1-3]/.test(node.tagName))) {
+                                        content += node.nodeType === 1 ? node.textContent + '\n' : node.textContent;
+                                        node = node.nextSibling;
                                     }
+                                    content = content.replace(/\n{3,}/g, '\n').trim();
+                                    if (content) chapters.push(content);
                                 }
                             }
                         }
@@ -144,7 +127,7 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
                 const mode = modeSelect.value;
 
                 const usableChaps = chapters.slice(offset);
-                const effectiveStart = startNumber + offset; // Original logic for effectiveStart
+                const effectiveStart = startNumber + offset;
 
                 const zip = new JSZip();
 
@@ -155,8 +138,6 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
                     });
                 } else { // grouped
                     let groupSize = parseInt(groupSizeEl.value, 10) || 1;
-                    if (groupSize < 1) groupSize = 1; // Ensure group size is at least 1
-
                     for (let i = 0; i < usableChaps.length; i += groupSize) {
                         const groupStart = effectiveStart + i;
                         const groupEnd = Math.min(
@@ -181,7 +162,7 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
             .then(({ blob, count, skipped }) => {
                 if (downloadLink) {
                     downloadLink.href = URL.createObjectURL(blob);
-                    downloadLink.download = `${(chapterPatternEl.value || 'chapter').replace(/[^\w\s-]/g, '')}_chapters.zip`;
+                    downloadLink.download = `${chapterPatternEl.value || 'chapter'}_chapters.zip`;
                 }
                 if (downloadSec) downloadSec.style.display = 'block';
                 if (statusEl) {
@@ -205,4 +186,3 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
             });
     });
 }
-/* ==== END - epub-splitter.js ==== */
