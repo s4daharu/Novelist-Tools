@@ -1,3 +1,4 @@
+/* ==== START 4/10 - epub-to-zip.js (Novelist-Tools-main/js/epub-to-zip.js) ==== */
 // js/epub-to-zip.js
 
 // --- State Variables (module-scoped) ---
@@ -519,7 +520,20 @@ export function initializeEpubToZip(showAppToast, toggleAppSpinner) {
                     continue;
                 }
 
-                const chapterHtml = await chapterFile.async("string");
+                // MODIFICATION START: Read as bytes and use TextDecoder for UTF-8
+                const chapterBytes = await chapterFile.async("uint8array");
+                let chapterHtml;
+                try {
+                    const decoder = new TextDecoder('utf-8', { fatal: false }); // fatal:false will insert � for errors
+                    chapterHtml = decoder.decode(chapterBytes);
+                } catch (e) {
+                    console.error(`Error decoding chapter ${entry.href} as UTF-8:`, e);
+                    chapterHtml = ""; // Fallback to empty string or handle as an error
+                    updateLocalStatus(`Warning: Could not decode chapter ${entry.title.substring(0,30)}. It may be corrupted or not UTF-8.`, true);
+                    // Optionally: continue; to skip this chapter entirely if decoding fails
+                }
+                // MODIFICATION END
+
                 const chapterText = extractTextFromHtml(chapterHtml);
 
                 if (chapterText && chapterText.trim().length > 0) {
@@ -527,7 +541,7 @@ export function initializeEpubToZip(showAppToast, toggleAppSpinner) {
                     outputZip.file(txtFilename, chapterText);
                     filesAdded++;
                 } else {
-                    console.warn(`No text content extracted from: ${entry.href}`);
+                    console.warn(`No text content extracted from: ${entry.href} (after decoding)`);
                 }
                 await delay(5); // Allow UI update
             }
@@ -562,3 +576,4 @@ export function initializeEpubToZip(showAppToast, toggleAppSpinner) {
 
 
 }
+/* ==== END - epub-to-zip.js ==== */
