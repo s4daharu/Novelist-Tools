@@ -48,7 +48,7 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
             showAppToast("No file selected for EPUB splitting.", true);
             return;
         }
-        
+
         toggleAppSpinner(true); // Show spinner
         if (statusEl) statusEl.style.display = 'none';
         if (downloadSec) downloadSec.style.display = 'none';
@@ -61,18 +61,35 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
         readFileAsArrayBuffer(selectedFile)
             .then(buffer => JSZip.loadAsync(buffer))
             .then(epub => {
-                // ... (Keep the entire EPUB parsing and chapter extraction logic here)
-                // ... from your original script, starting from:
-                // const structure = {};
-                // const promises = [];
-                // ... down to the end of this specific .then() block for chapter extraction
                 const structure = {};
                 const promises = [];
                 epub.forEach((path, file) => {
                     structure[path] = { dir: file.dir, contentType: file.options.contentType };
                     if (!file.dir && (path.endsWith('.xhtml') || path.endsWith('.html') ||
                                         path.includes('content.opf') || path.includes('toc.ncx'))) {
-                        promises.push(file.async('text').then(c => structure[path].content = c));
+                        // MINIMAL CHANGE FOR UTF-8 DECODING STARTS HERE
+                        promises.push(
+                            file.async('uint8array').then(bytes => { // 1. Read as raw bytes
+                                try {
+                                    const decoder = new TextDecoder('utf-8', { fatal: false }); // 2. Create a UTF-8 decoder
+                                    structure[path].content = decoder.decode(bytes); // 3. Decode bytes to string
+                                } catch (e) {
+                                    console.error(`Error decoding file ${path} as UTF-8:`, e);
+                                    // Fallback: try JSZip's default text decoding if our explicit one fails (less likely for this issue type)
+                                    return file.async('text').then(c => structure[path].content = c)
+                                                 .catch(textErr => {
+                                                     console.error(`Fallback text decoding also failed for ${path}:`, textErr);
+                                                     structure[path].content = ""; // Final fallback to empty
+                                                     showAppToast(`Warning: Could not decode '${path}' correctly.`, true);
+                                                 });
+                                }
+                            }).catch(err => { // Catch error from .async('uint8array')
+                                console.error(`Error reading file ${path} as uint8array:`, err);
+                                structure[path].content = ""; // Fallback to empty string
+                                showAppToast(`Error reading file '${path}' from EPUB.`, true);
+                            })
+                        );
+                        // MINIMAL CHANGE FOR UTF-8 DECODING ENDS HERE
                     }
                 });
                 return Promise.all(promises).then(() => structure);
@@ -138,6 +155,7 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
                     });
                 } else { // grouped
                     let groupSize = parseInt(groupSizeEl.value, 10) || 1;
+                    if (groupSize < 1) groupSize = 1; // Ensure groupSize is at least 1
                     for (let i = 0; i < usableChaps.length; i += groupSize) {
                         const groupStart = effectiveStart + i;
                         const groupEnd = Math.min(
