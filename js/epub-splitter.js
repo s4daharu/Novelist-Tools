@@ -48,7 +48,7 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
             return;
         }
 
-        toggleAppSpinner(true); // Show spinner
+        toggleAppSpinner(true);
         if (statusEl) statusEl.style.display = 'none';
         if (downloadSec) downloadSec.style.display = 'none';
 
@@ -63,27 +63,40 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
                 const structure = {};
                 const promises = [];
                 epub.forEach((path, file) => {
-                    structure[path] = { dir: file.dir, contentType: file.options.contentType, content: "" }; // Initialize content as empty string
+                    // Initialize with basic info; content will be populated by the promise
+                    structure[path] = { dir: file.dir, contentType: file.options.contentType, content: null };
+
                     if (!file.dir && (path.endsWith('.xhtml') || path.endsWith('.html') ||
                                         path.includes('content.opf') || path.includes('toc.ncx'))) {
-                        // STRONGER MINIMAL CHANGE FOR UTF-8 DECODING STARTS HERE
                         promises.push(
-                            file.async('uint8array').then(bytes => {
-                                try {
-                                    const decoder = new TextDecoder('utf-8', { fatal: true }); // Use fatal: true to see if it errors
-                                    structure[path].content = decoder.decode(bytes);
-                                } catch (e) {
-                                    console.error(`CRITICAL DECODING ERROR for ${path}:`, e.message);
-                                    showAppToast(`Critical UTF-8 decoding error for file: ${path}. Content may be corrupt.`, true);
-                                    structure[path].content = "DECODING_ERROR"; // Mark as error content
-                                }
-                            }).catch(err => {
-                                console.error(`Error reading file ${path} as uint8array:`, err);
-                                structure[path].content = "READ_ERROR"; // Mark as error content
-                                showAppToast(`Error reading file '${path}' from EPUB.`, true);
-                            })
+                            file.async('uint8array') // Always read as raw bytes first
+                                .then(bytes => {
+                                    try {
+                                        // Explicitly decode as UTF-8
+                                        const decoder = new TextDecoder('utf-8', { fatal: false }); // fatal:false to allow replacement chars for truly bad sequences
+                                        structure[path].content = decoder.decode(bytes);
+
+                                        // DIAGNOSTIC LOG: Check for the problematic character sequence directly after decoding
+                                        if (path.includes("content.xhtml") || path.includes("chapter81")) { // Adjust if your filename is different
+                                            if (structure[path].content.includes("Lao’er")) {
+                                                console.log(`SUCCESSFUL DECODE for ${path} containing "Lao’er": Partial content:`, structure[path].content.substring(0, 500));
+                                            } else if (structure[path].content.includes("Laoâ€™er")) {
+                                                console.error(`PROBLEM STILL EXISTS in ${path} *after TextDecoder* for "Laoâ€™er": Partial content:`, structure[path].content.substring(0, 500));
+                                            }
+                                        }
+
+                                    } catch (decodeError) {
+                                        console.error(`UTF-8 Decoding Error for ${path}:`, decodeError);
+                                        structure[path].content = `DECODING_ERROR: ${decodeError.message}`; // Store error
+                                        showAppToast(`Error decoding file: ${path}`, true);
+                                    }
+                                })
+                                .catch(readError => {
+                                    console.error(`Error reading file ${path} as uint8array:`, readError);
+                                    structure[path].content = `READ_ERROR: ${readError.message}`; // Store error
+                                    showAppToast(`Error reading file from EPUB: ${path}`, true);
+                                })
                         );
-                        // STRONGER MINIMAL CHANGE FOR UTF-8 DECODING ENDS HERE
                     }
                 });
                 return Promise.all(promises).then(() => structure);
@@ -92,42 +105,57 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
                 const chapters = [];
                 for (let path in structure) {
                     const info = structure[path];
-                    // Check if content is a valid string and not an error marker
-                    if (!info.dir && info.content && typeof info.content === 'string' && info.content !== "DECODING_ERROR" && info.content !== "READ_ERROR") {
-                        const parser = new DOMParser();
-                        let doc = parser.parseFromString(info.content, 'text/xml');
-                        if (doc.querySelector('parsererror')) {
-                            doc = parser.parseFromString(info.content, 'text/html');
-                        }
-                        const sections = doc.querySelectorAll(
-                            'section[epub\\:type="chapter"], div[epub\\:type="chapter"], ' +
-                            'section.chapter, div.chapter, section[role="chapter"], div[role="chapter"]'
-                        );
-                        if (sections.length) {
-                            sections.forEach(sec => {
-                                sec.querySelectorAll('h1,h2,h3,.title,.chapter-title').forEach(el => el.remove());
-                                const paras = sec.querySelectorAll('p');
-                                const text = paras.length ?
-                                    Array.from(paras).map(p => p.textContent.trim()).filter(t => t).join('\n') :
-                                    sec.textContent.replace(/\s*\n\s*/g, '\n').trim();
-                                if (text) chapters.push(text);
-                            });
-                        } else {
-                            const headings = doc.querySelectorAll('h1,h2,h3');
-                            if (headings.length > 1) {
-                                for (let i = 0; i < headings.length; i++) {
-                                    let node = headings[i].nextSibling, content = '';
-                                    while (node && !(node.nodeType === 1 && /H[1-3]/.test(node.tagName))) {
-                                        content += node.nodeType === 1 ? node.textContent + '\n' : node.textContent;
-                                        node = node.nextSibling;
+
+                    // Check if content is a valid string and not an error marker from the previous step
+                    if (info.content && typeof info.content === 'string' && !info.content.startsWith('DECODING_ERROR') && !info.content.startsWith('READ_ERROR')) {
+                        if (path.endsWith('.xhtml') || path.endsWith('.html')) { // Only process XHTML/HTML for chapters here
+                            const parser = new DOMParser();
+                            let doc = parser.parseFromString(info.content, 'application/xml'); // text/xml or application/xhtml+xml
+                            
+                            const parserError = doc.querySelector('parsererror');
+                            if (parserError) {
+                                console.warn(`XML parsing error in ${path} (likely XHTML issue), falling back to HTML parser. Error:`, parserError.textContent);
+                                doc = parser.parseFromString(info.content, 'text/html');
+                            }
+
+                            const sections = doc.querySelectorAll(
+                                'section[epub\\:type="chapter"], div[epub\\:type="chapter"], ' +
+                                'section.chapter, div.chapter, section[role="chapter"], div[role="chapter"]'
+                            );
+                            if (sections.length) {
+                                sections.forEach(sec => {
+                                    sec.querySelectorAll('h1,h2,h3,.title,.chapter-title').forEach(el => el.remove());
+                                    const paras = sec.querySelectorAll('p');
+                                    const text = paras.length ?
+                                        Array.from(paras).map(p => p.textContent.trim()).filter(t => t).join('\n') :
+                                        sec.textContent.replace(/\s*\n\s*/g, '\n').trim();
+                                    if (text) chapters.push(text);
+                                });
+                            } else {
+                                // Original fallback for heading-based structures
+                                const headings = doc.querySelectorAll('h1,h2,h3');
+                                if (headings.length > 1) {
+                                    for (let i = 0; i < headings.length; i++) {
+                                        let node = headings[i].nextSibling, content = '';
+                                        while (node && !(node.nodeType === 1 && /H[1-3]/.test(node.tagName))) {
+                                            content += node.nodeType === 1 ? node.textContent + '\n' : node.textContent;
+                                            node = node.nextSibling;
+                                        }
+                                        content = content.replace(/\n{3,}/g, '\n').trim();
+                                        if (content) chapters.push(content);
                                     }
-                                    content = content.replace(/\n{3,}/g, '\n').trim();
-                                    if (content) chapters.push(content);
+                                } else if (doc.body && doc.body.textContent.trim().length > 0 && !sections.length && !(doc.documentElement.namespaceURI === "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" && doc.documentElement.tagName === "parsererror") ) {
+                                    // If no sections and no multiple headings, but body has text, consider it.
+                                    // Avoid taking content if it's just a parser error document.
+                                    // This part of the heuristic can be risky as it might grab non-chapter files.
+                                    // For now, let's keep it close to original but be mindful.
+                                    // console.log(`Taking full body content for ${path} as no specific sections/headings found.`);
+                                    // chapters.push(doc.body.textContent.replace(/\s*\n\s*/g, '\n').trim());
                                 }
                             }
                         }
-                    } else if (info.content === "DECODING_ERROR" || info.content === "READ_ERROR") {
-                        console.warn(`Skipping chapter extraction for ${path} due to previous error.`);
+                    } else if (info.content && (info.content.startsWith('DECODING_ERROR') || info.content.startsWith('READ_ERROR'))) {
+                        console.warn(`Skipping DOM parsing for ${path} due to: ${info.content}`);
                     }
                 }
                 return chapters;
