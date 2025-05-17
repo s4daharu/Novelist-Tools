@@ -16,7 +16,6 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
     const splitBtn = document.getElementById('splitBtn');
     const modeSelect = document.getElementById('modeSelect');
     const groupSizeGrp = document.getElementById('groupSizeGroup');
-    // const spinnerSpl = document.getElementById('spinnerSplitter'); // Spinner handled by toggleAppSpinner
     const statusEl = document.getElementById('statusMessage');
     const downloadSec = document.querySelector('#splitterApp .download-section');
     const downloadLink = document.getElementById('downloadLink');
@@ -64,32 +63,27 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
                 const structure = {};
                 const promises = [];
                 epub.forEach((path, file) => {
-                    structure[path] = { dir: file.dir, contentType: file.options.contentType };
+                    structure[path] = { dir: file.dir, contentType: file.options.contentType, content: "" }; // Initialize content as empty string
                     if (!file.dir && (path.endsWith('.xhtml') || path.endsWith('.html') ||
                                         path.includes('content.opf') || path.includes('toc.ncx'))) {
-                        // MINIMAL CHANGE FOR UTF-8 DECODING STARTS HERE
+                        // STRONGER MINIMAL CHANGE FOR UTF-8 DECODING STARTS HERE
                         promises.push(
-                            file.async('uint8array').then(bytes => { // 1. Read as raw bytes
+                            file.async('uint8array').then(bytes => {
                                 try {
-                                    const decoder = new TextDecoder('utf-8', { fatal: false }); // 2. Create a UTF-8 decoder
-                                    structure[path].content = decoder.decode(bytes); // 3. Decode bytes to string
+                                    const decoder = new TextDecoder('utf-8', { fatal: true }); // Use fatal: true to see if it errors
+                                    structure[path].content = decoder.decode(bytes);
                                 } catch (e) {
-                                    console.error(`Error decoding file ${path} as UTF-8:`, e);
-                                    // Fallback: try JSZip's default text decoding if our explicit one fails (less likely for this issue type)
-                                    return file.async('text').then(c => structure[path].content = c)
-                                                 .catch(textErr => {
-                                                     console.error(`Fallback text decoding also failed for ${path}:`, textErr);
-                                                     structure[path].content = ""; // Final fallback to empty
-                                                     showAppToast(`Warning: Could not decode '${path}' correctly.`, true);
-                                                 });
+                                    console.error(`CRITICAL DECODING ERROR for ${path}:`, e.message);
+                                    showAppToast(`Critical UTF-8 decoding error for file: ${path}. Content may be corrupt.`, true);
+                                    structure[path].content = "DECODING_ERROR"; // Mark as error content
                                 }
-                            }).catch(err => { // Catch error from .async('uint8array')
+                            }).catch(err => {
                                 console.error(`Error reading file ${path} as uint8array:`, err);
-                                structure[path].content = ""; // Fallback to empty string
+                                structure[path].content = "READ_ERROR"; // Mark as error content
                                 showAppToast(`Error reading file '${path}' from EPUB.`, true);
                             })
                         );
-                        // MINIMAL CHANGE FOR UTF-8 DECODING ENDS HERE
+                        // STRONGER MINIMAL CHANGE FOR UTF-8 DECODING ENDS HERE
                     }
                 });
                 return Promise.all(promises).then(() => structure);
@@ -98,7 +92,8 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
                 const chapters = [];
                 for (let path in structure) {
                     const info = structure[path];
-                    if (!info.dir && info.content) {
+                    // Check if content is a valid string and not an error marker
+                    if (!info.dir && info.content && typeof info.content === 'string' && info.content !== "DECODING_ERROR" && info.content !== "READ_ERROR") {
                         const parser = new DOMParser();
                         let doc = parser.parseFromString(info.content, 'text/xml');
                         if (doc.querySelector('parsererror')) {
@@ -131,6 +126,8 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
                                 }
                             }
                         }
+                    } else if (info.content === "DECODING_ERROR" || info.content === "READ_ERROR") {
+                        console.warn(`Skipping chapter extraction for ${path} due to previous error.`);
                     }
                 }
                 return chapters;
@@ -155,7 +152,7 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
                     });
                 } else { // grouped
                     let groupSize = parseInt(groupSizeEl.value, 10) || 1;
-                    if (groupSize < 1) groupSize = 1; // Ensure groupSize is at least 1
+                    if (groupSize < 1) groupSize = 1;
                     for (let i = 0; i < usableChaps.length; i += groupSize) {
                         const groupStart = effectiveStart + i;
                         const groupEnd = Math.min(
@@ -185,7 +182,7 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
                 if (downloadSec) downloadSec.style.display = 'block';
                 if (statusEl) {
                     statusEl.textContent = `Extracted ${count} chapters (skipped ${skipped})`;
-                    statusEl.className = 'status success'; // Assuming you have CSS for .success / .error
+                    statusEl.className = 'status success';
                     statusEl.style.display = 'block';
                 }
                 showAppToast(`Extracted ${count} chapters (skipped ${skipped})`);
@@ -200,7 +197,7 @@ export function initializeEpubSplitter(showAppToast, toggleAppSpinner) {
                 showAppToast(`Error: ${err.message}`, true);
             })
             .finally(() => {
-                toggleAppSpinner(false); // Hide spinner
+                toggleAppSpinner(false);
             });
     });
 }
