@@ -429,10 +429,22 @@ export function initializeEpubToZip(showAppToast, toggleAppSpinner) {
     const downloadSec = document.getElementById('downloadSectionEpubToZip');
     const downloadLink = document.getElementById('downloadLinkZipFromEpub');
 
-    if (!fileInput || !extractBtn) {
-        console.error("EPUB to ZIP UI elements not found.");
+    // NEW: Get references to the new UI elements
+    const enableRemoveLinesToggle = document.getElementById('epubToZipEnableRemoveLines');
+    const removeLinesOptionsGroup = document.getElementById('epubToZipRemoveLinesOptionsGroup');
+    const linesToRemoveInput = document.getElementById('epubToZipLinesToRemove');
+
+     if (!fileInput || !extractBtn || !enableRemoveLinesToggle || !removeLinesOptionsGroup || !linesToRemoveInput) { // Check all new elements
+        console.error("EPUB to ZIP UI elements (including line removal options) not found.");
         return;
     }
+
+    // NEW: Event listener for the toggle checkbox
+    enableRemoveLinesToggle.addEventListener('change', (e) => {
+        if (removeLinesOptionsGroup) { // Check if element exists
+            removeLinesOptionsGroup.style.display = e.target.checked ? 'block' : 'none';
+        }
+    });
 
     function updateLocalStatus(message, isError = false) {
         if (statusEl) {
@@ -440,24 +452,27 @@ export function initializeEpubToZip(showAppToast, toggleAppSpinner) {
             statusEl.style.display = 'block';
             statusEl.className = isError ? 'status error' : 'status success'; // Use your app's classes
         }
-        // We can also call showAppToast for more prominent global messages if needed
         if (isError) showAppToast(message, true);
     }
 
     function resetUIState() {
-        updateLocalStatus('Select an EPUB file.');
+       updateLocalStatus('Select an EPUB file.');
         if (downloadSec) downloadSec.style.display = 'none';
         extractBtn.disabled = true;
         currentZipInstance = null;
         currentTocEntries = [];
         currentOpfDirPath = '';
         currentEpubFilename = '';
-        fileInput.value = ''; // Reset file input
+        fileInput.value = '';
+        //Reset line removal options
+        if (enableRemoveLinesToggle) enableRemoveLinesToggle.checked = false;
+        if (removeLinesOptionsGroup) removeLinesOptionsGroup.style.display = 'none';
+        if (linesToRemoveInput) linesToRemoveInput.value = '1'; // Reset to default
     }
 
     fileInput.addEventListener('change', async (event) => {
         const file = event.target.files[0];
-        resetUIState();
+        resetUIState(); // Will also reset new options
 
         if (!file) return;
         if (!file.name.toLowerCase().endsWith('.epub')) {
@@ -485,16 +500,16 @@ export function initializeEpubToZip(showAppToast, toggleAppSpinner) {
                 if (!statusEl.textContent.toLowerCase().includes('error') && !statusEl.textContent.toLowerCase().includes('warning')) {
                      updateLocalStatus('No chapters found or ToC unparsable. Some EPUBs might lack a standard ToC.', true);
                 }
-                // Keep button disabled if no chapters are found.
             }
         } catch (error) {
             console.error("EPUB selection/parsing Error:", error);
             updateLocalStatus(`Error: ${error.message || 'Could not process EPUB.'}`, true);
-            resetUIState();
+            resetUIState(); // Ensure full reset on error
         } finally {
             toggleAppSpinner(false);
         }
     });
+
 
     extractBtn.addEventListener('click', async () => {
         if (!currentZipInstance || currentTocEntries.length === 0) {
@@ -510,79 +525,90 @@ export function initializeEpubToZip(showAppToast, toggleAppSpinner) {
         let filesAdded = 0;
         const totalChapters = currentTocEntries.length;
 
+        // NEW: Get the number of lines to remove
+        let numLinesToRemove = 0;
+        if (enableRemoveLinesToggle.checked) {
+            numLinesToRemove = parseInt(linesToRemoveInput.value, 10);
+            if (isNaN(numLinesToRemove) || numLinesToRemove < 0) {
+                numLinesToRemove = 0; // Default to 0 if input is invalid
+            }
+        }
+
         try {
             updateLocalStatus(`Starting chapter extraction (0/${totalChapters})...`);
 
             for (let i = 0; i < totalChapters; i++) {
                 const entry = currentTocEntries[i];
-                const chapterIndex = String(i + 1).padStart(2, '0'); // For filename
+                const chapterIndex = String(i + 1).padStart(2, '0');
                 updateLocalStatus(`Processing chapter ${i + 1}/${totalChapters}: ${entry.title.substring(0,30)}...`);
 
-                const chapterFile = currentZipInstance.file(entry.href); // entry.href is already resolved
+                const chapterFile = currentZipInstance.file(entry.href);
                 if (!chapterFile) {
                     console.warn(`Chapter file not found in EPUB: ${entry.href}`);
                     continue;
                 }
 
-                // MODIFICATION START: Read as bytes and use TextDecoder for UTF-8
                 const chapterBytes = await chapterFile.async("uint8array");
                 let chapterHtml;
                 try {
-                    // Use TextDecoder for robust UTF-8 decoding.
-                    // 'fatal: false' replaces undecodable bytes with U+FFFD (replacement character �)
-                    // 'fatal: true' would throw an error, which might be too strict.
                     const decoder = new TextDecoder('utf-8', { fatal: false });
                     chapterHtml = decoder.decode(chapterBytes);
                 } catch (e) {
                     console.error(`Error decoding chapter ${entry.href} as UTF-8:`, e);
-                    chapterHtml = ""; // Fallback to empty string
+                    chapterHtml = "";
                     updateLocalStatus(`Warning: Could not decode chapter "${entry.title.substring(0,30)}". It may be corrupted or not UTF-8.`, true);
-                    // Optionally, one might want to 'continue;' to skip this chapter entirely.
                 }
-                // MODIFICATION END
 
-                const chapterText = extractTextFromHtml(chapterHtml);
+                let chapterText = extractTextFromHtml(chapterHtml);
+
+                // NEW: Remove starting lines if requested
+                if (numLinesToRemove > 0 && chapterText) {
+                    const lines = chapterText.split('\n');
+                    if (lines.length > numLinesToRemove) {
+                        chapterText = lines.slice(numLinesToRemove).join('\n');
+                    } else {
+                        // If removing N lines removes all content, result is an empty string
+                        chapterText = '';
+                    }
+                }
+                // END NEW
 
                 if (chapterText && chapterText.trim().length > 0) {
-                    // Use chapterIndex for consistent, ordered filenames.
-                    // Sanitizing chapter titles for filenames can be complex and lead to duplicates.
                     const txtFilename = `C${chapterIndex}.txt`;
                     outputZip.file(txtFilename, chapterText);
                     filesAdded++;
                 } else {
-                    console.warn(`No text content extracted from: ${entry.href} (after decoding and HTML processing)`);
+                    console.warn(`No text content extracted (or became empty after line removal) from: ${entry.href}`);
                 }
-                await delay(5); // Allow UI update, especially for many chapters
+                await delay(5);
             }
 
             if (filesAdded > 0) {
-                updateLocalStatus(`Generating ZIP file with ${filesAdded} chapters...`);
+                 updateLocalStatus(`Generating ZIP file with ${filesAdded} chapters...`);
                 const zipBlob = await outputZip.generateAsync({ type: "blob", compression: "DEFLATE" });
 
                 const downloadFilenameBase = currentEpubFilename.replace(/\.epub$/i, '') || 'epub_content';
                 triggerBrowserDownload(zipBlob, `${sanitizeFilenameForZip(downloadFilenameBase)}_chapters.zip`);
 
                 updateLocalStatus(`Download started (${filesAdded}/${totalChapters} chapters).`);
-                if (downloadSec && downloadLink) { // Show download link (though direct trigger is used)
-                    downloadLink.href = URL.createObjectURL(zipBlob); // For potential re-download
+                if (downloadSec && downloadLink) {
+                    downloadLink.href = URL.createObjectURL(zipBlob);
                     downloadLink.download = `${sanitizeFilenameForZip(downloadFilenameBase)}_chapters.zip`;
                     downloadSec.style.display = 'block';
                 }
-
             } else {
-                updateLocalStatus("Extraction complete, but no chapter content was retrieved. Ensure EPUB content is as expected.", true);
+                updateLocalStatus("Extraction complete, but no chapter content was retrieved or all content was removed by line filter. Ensure EPUB content is as expected and check 'lines to remove' setting.", true);
             }
 
         } catch (err) {
             console.error("Error during chapter extraction or ZIP creation:", err);
             updateLocalStatus(`Error: ${err.message}`, true);
         } finally {
-            extractBtn.disabled = false; // Re-enable button
+            extractBtn.disabled = false;
             extractBtn.textContent = 'Extract Chapters to ZIP';
             toggleAppSpinner(false);
         }
     });
-
 
 }
 /* ==== END - epub-to-zip.js ==== */
