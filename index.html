@@ -15,26 +15,57 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
 
+  <!-- Link to external CSS file -->
   <link rel="stylesheet" href="css/style.css">
+
 </head>
 
 <body>
   <header>
     <div class="menu-toggle" onclick="toggleMenu()">☰</div>
-    <div class="title" id="appTitle">EPUB Chapter Splitter</div>
+    <div class="title" id="appTitle">Novelist Tools</div>
   </header>
 
   <div class="sidebar" id="sidebar">
-  <h2>Select Tool</h2>
-  <button onclick="switchApp('splitter')">EPUB Chapter Splitter</button>
-  <button onclick="switchApp('backup')">Novel Backup Utility</button>
-  <button onclick="switchApp('zipToEpub')">ZIP to EPUB Converter</button> <!-- NEW -->
-  <button onclick="switchApp('epubToZip')">EPUB to ZIP (TXT)</button>
-</div>
+    <h2>Tools</h2>
+    <button onclick="showDashboard()">Home Dashboard</button>
+    <button onclick="launchAppFromCard('splitter')">EPUB Chapter Splitter</button>
+    <button onclick="launchAppFromCard('backup')">Novel Backup Utility</button>
+    <button onclick="launchAppFromCard('zipToEpub')">ZIP to EPUB Converter</button>
+    <button onclick="launchAppFromCard('epubToZip')">EPUB to ZIP (TXT)</button>
+  </div>
 
   <div class="container">
+    <!-- Dashboard Section -->
+    <div id="dashboardApp" class="dashboard-container">
+      <h1>Welcome to Novelist Tools</h1>
+      <p class="dashboard-intro">Select a tool below to get started:</p>
+      <div class="tool-cards-grid">
+        <div class="tool-card" onclick="launchAppFromCard('splitter')">
+          <div class="tool-card-icon">✂️</div>
+          <h2>EPUB Chapter Splitter</h2>
+          <p>Divide EPUB files into individual or grouped chapter text files.</p>
+        </div>
+        <div class="tool-card" onclick="launchAppFromCard('backup')">
+          <div class="tool-card-icon">💾</div>
+          <h2>Novel Backup Utility</h2>
+          <p>Create, extend, merge, and manage novel backup files (JSON format).</p>
+        </div>
+        <div class="tool-card" onclick="launchAppFromCard('zipToEpub')">
+          <div class="tool-card-icon">📦📖</div>
+          <h2>ZIP to EPUB Converter</h2>
+          <p>Convert a ZIP of text files into a structured EPUB file.</p>
+        </div>
+        <div class="tool-card" onclick="launchAppFromCard('epubToZip')">
+          <div class="tool-card-icon">📖📄</div>
+          <h2>EPUB to ZIP (TXT)</h2>
+          <p>Extract chapters from an EPUB into a ZIP of text files.</p>
+        </div>
+      </div>
+    </div>
+
     <!-- EPUB Splitter -->
-    <div id="splitterApp" class="card">
+    <div id="splitterApp" class="card tool-section" style="display:none;">
       <h1>EPUB Chapter Splitter</h1>
       <div class="upload-section">
         <label for="epubUpload" class="btn upload-btn">Upload EPUB File</label>
@@ -75,7 +106,7 @@
     </div>
 
     <!-- Backup Utility -->
-    <div id="backupApp" class="card" style="display:none;">
+    <div id="backupApp" class="card tool-section" style="display:none;">
       <h1>Novel Backup File Utility</h1>
       <div class="operation-selector">
         <label for="operationSelect">Select Operation:</label>
@@ -84,10 +115,9 @@
           <option value="createFromZip">Create Backup from ZIP</option>
           <option value="extend">Extend Existing Backup File</option>
           <option value="merge">Merge Backup Files</option>
-          <option value="findReplace">Find &amp; Replace</option>
+          <option value="findReplace">Find & Replace</option>
         </select>
       </div>
-
 
       <!-- Create -->
       <div id="createSection" class="operation-section">
@@ -120,14 +150,12 @@
         <h2>Create Backup from ZIP File</h2>
         <label for="zipBackupFile">Upload ZIP File (.zip containing .txt chapters):</label>
         <input type="file" id="zipBackupFile" accept=".zip">
-
         <label for="zipProjectTitle">Project Title:</label>
         <input type="text" id="zipProjectTitle" placeholder="Enter project title">
         <label for="zipDescription">Description:</label>
         <textarea id="zipDescription" placeholder="Enter project description"></textarea>
         <label for="zipUniqueCode">Unique Code (Optional):</label>
         <input type="text" id="zipUniqueCode" placeholder="Leave blank to generate automatically">
-        
         <label for="zipCreateTOC">Show Table of Contents:</label>
         <select id="zipCreateTOC">
           <option value="true">True</option>
@@ -169,21 +197,21 @@
 
       <!-- Find & Replace -->
       <div id="findReplaceSection" class="operation-section" style="display:none;">
-        <h2>Find &amp; Replace in Backup File</h2>
+        <h2>Find & Replace in Backup File</h2>
         <label for="frBackupFile">Upload Backup File:</label>
         <input type="file" id="frBackupFile" accept=".json,.txt">
         <label for="findPattern">Find Pattern:</label>
         <input type="text" id="findPattern" placeholder="Enter search term or regex">
         <label for="replaceText">Replacement Text:</label>
         <input type="text" id="replaceText" placeholder="Enter replacement text">
-        <label><input type="checkbox" id="useRegex"> Use Regular Expressions</label>
+        <label class="checkbox-label-wrapper" for="useRegexBackup"><input type="checkbox" id="useRegexBackup"> Use Regular Expressions</label> <!-- Added class and updated 'for' -->
         <div style="display:flex; gap:10px; margin:15px 0;">
           <button id="findPreviousBtn" class="btn btn-primary">Find Previous</button>
           <button id="findNextBtn" class="btn btn-primary">Find Next</button>
         </div>
         <div style="display:flex; gap:10px; margin-bottom:15px;">
           <button id="replaceNextBtn" class="btn btn-primary">Replace This</button>
-          <button id="replaceAllBtn" class="btn btn-primary">Replace All &amp; Download</button>
+          <button id="replaceAllBtn" class="btn btn-primary">Replace All & Download</button>
         </div>
         <div id="currentMatchDisplay" style="
              background:#2e2e2e; padding:12px; border-radius:8px;
@@ -191,73 +219,71 @@
           No match found yet.
         </div>
       </div>
-      
       <div id="spinnerBackup" class="spinner-backup"></div>
     </div>
-       <!-- ZIP to EPUB Converter -->
-      <div id="zipToEpubApp" class="card" style="display:none;">
-        <h1>ZIP to EPUB Converter</h1>
-        <div class="upload-section">
-          <label for="zipUploadForEpub" class="btn upload-btn">Upload ZIP File (.zip with .txt chapters)</label>
-          <input type="file" id="zipUploadForEpub" accept=".zip" style="display:none;">
-          <div id="zipFileNameForEpub" style="margin-top:10px;font-size:14px;color:#ccc;text-align:center;"></div>
-        </div>
 
-        <div class="options-section">
-          <div class="option-group">
-            <label for="epubTitle">EPUB Title:</label>
-            <input type="text" id="epubTitle" placeholder="Enter EPUB title" value="My Novel">
-          </div>
-          <div class="option-group">
-            <label for="epubAuthor">Author:</label>
-            <input type="text" id="epubAuthor" placeholder="Enter author name" value="Unknown Author">
-          </div>
-          <div class="option-group">
-            <label for="epubLanguage">Language Code (e.g., en, es):</label>
-            <input type="text" id="epubLanguage" placeholder="en" value="en">
-          </div>
-          <div class="option-group">
-              <label for="epubCoverImage">Cover Image (Optional, JPG/PNG):</label>
-              <input type="file" id="epubCoverImage" accept="image/jpeg,image/png" style="margin-top:5px;">
-              <div id="epubCoverFileName" style="margin-top:5px;font-size:12px;color:#aaa;text-align:center;"></div>
-          </div>
+    <!-- ZIP to EPUB Converter -->
+    <div id="zipToEpubApp" class="card tool-section" style="display:none;">
+      <h1>ZIP to EPUB Converter</h1>
+      <div class="upload-section">
+        <label for="zipUploadForEpub" class="btn upload-btn">Upload ZIP File (.zip with .txt chapters)</label>
+        <input type="file" id="zipUploadForEpub" accept=".zip" style="display:none;">
+        <div id="zipFileNameForEpub" style="margin-top:10px;font-size:14px;color:#ccc;text-align:center;"></div>
+      </div>
+      <div class="options-section">
+        <div class="option-group">
+          <label for="epubTitle">EPUB Title:</label>
+          <input type="text" id="epubTitle" placeholder="Enter EPUB title" value="My Novel">
         </div>
-
-        <button id="createEpubBtn" class="btn split-btn" disabled>Create EPUB</button> <!-- Using split-btn style for now -->
-        <div id="spinnerZipToEpub" class="spinner"></div> <!-- Using common spinner style -->
-        <div id="statusMessageZipToEpub" class="status" style="display:none;"></div>
-        <div class="download-section" id="downloadSectionZipToEpub" style="display:none;">
-          <a id="downloadLinkEpub" class="btn download-btn">Download EPUB</a>
+        <div class="option-group">
+          <label for="epubAuthor">Author:</label>
+          <input type="text" id="epubAuthor" placeholder="Enter author name" value="Unknown Author">
+        </div>
+        <div class="option-group">
+          <label for="epubLanguage">Language Code (e.g., en, es):</label>
+          <input type="text" id="epubLanguage" placeholder="en" value="en">
+        </div>
+        <div class="option-group">
+            <label for="epubCoverImage">Cover Image (Optional, JPG/PNG):</label>
+            <input type="file" id="epubCoverImage" accept="image/jpeg,image/png" style="margin-top:5px;">
+            <div id="epubCoverFileName" style="margin-top:5px;font-size:12px;color:#aaa;text-align:center;"></div>
         </div>
       </div>
+      <button id="createEpubBtn" class="btn split-btn" disabled>Create EPUB</button>
+      <div id="spinnerZipToEpub" class="spinner"></div>
+      <div id="statusMessageZipToEpub" class="status" style="display:none;"></div>
+      <div class="download-section" id="downloadSectionZipToEpub" style="display:none;">
+        <a id="downloadLinkEpub" class="btn download-btn">Download EPUB</a>
+      </div>
+    </div>
 
-      <!-- EPUB to ZIP (TXT) Converter -->
-      <div id="epubToZipApp" class="card" style="display:none;">
-        <h1>EPUB to ZIP (TXT)</h1>
-        <div class="upload-section">
-          <label for="epubUploadForTxt" class="btn upload-btn">Upload EPUB File</label>
-          <input type="file" id="epubUploadForTxt" accept=".epub" style="display:none;">
-          <div id="epubFileNameForTxt" style="margin-top:10px;font-size:14px;color:#ccc;text-align:center;"></div>
-        </div>
-          <!-- NEW: Option to remove starting lines -->
+    <!-- EPUB to ZIP (TXT) Converter -->
+    <div id="epubToZipApp" class="card tool-section" style="display:none;">
+      <h1>EPUB to ZIP (TXT)</h1>
+      <div class="upload-section">
+        <label for="epubUploadForTxt" class="btn upload-btn">Upload EPUB File</label>
+        <input type="file" id="epubUploadForTxt" accept=".epub" style="display:none;">
+        <div id="epubFileNameForTxt" style="margin-top:10px;font-size:14px;color:#ccc;text-align:center;"></div>
+      </div>
+      <div class="options-section">
         <div class="option-group">
           <label class="checkbox-label-wrapper" for="epubToZipEnableRemoveLines">
-            <input type="checkbox" id="epubToZipEnableRemoveLines" /> <!-- Note: self-closing, 'for' matches 'id' -->
+            <input type="checkbox" id="epubToZipEnableRemoveLines" />
             Remove initial lines from chapters
           </label>
         </div>
         <div class="option-group" id="epubToZipRemoveLinesOptionsGroup" style="display:none;">
           <label for="epubToZipLinesToRemove">Number of lines to remove:</label>
-          <input type="number" id="epubToZipLinesToRemove" min="0" value="1"> <!-- Removed max-width and margin from inline style, handle in CSS -->
-        </div>
-
-        <button id="extractChaptersBtn" class="btn split-btn" disabled>Extract Chapters to ZIP</button>
-        <div id="spinnerEpubToZip" class="spinner"></div>
-        <div id="statusMessageEpubToZip" class="status" style="display:none;"></div>
-        <div class="download-section" id="downloadSectionEpubToZip" style="display:none;">
-          <a id="downloadLinkZipFromEpub" class="btn download-btn">Download Chapter TXTs</a>
+          <input type="number" id="epubToZipLinesToRemove" min="0" value="1">
         </div>
       </div>
+      <button id="extractChaptersBtn" class="btn split-btn" disabled>Extract Chapters to ZIP</button>
+      <div id="spinnerEpubToZip" class="spinner"></div>
+      <div id="statusMessageEpubToZip" class="status" style="display:none;"></div>
+      <div class="download-section" id="downloadSectionEpubToZip" style="display:none;">
+        <a id="downloadLinkZipFromEpub" class="btn download-btn">Download Chapter TXTs</a>
+      </div>
+    </div>
   </div>
 
   <!-- Install button -->
@@ -274,11 +300,6 @@
   <!-- JSZip -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
 
-  <script>
-  
-  </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
-  <script type="module" src="js/main.js"></script> <!-- NEW -->
-</body>
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>

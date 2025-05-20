@@ -1,28 +1,11 @@
 // js/ui-helpers.js
 
+const toastEl = document.getElementById('toast'); // Define toastEl at the module level
+
 export function toggleMenu() {
     document.getElementById('sidebar').classList.toggle('open');
 }
 
-// js/ui-helpers.js
-export function switchApp(app) {
-    document.getElementById('splitterApp').style.display = app === 'splitter' ? 'block' : 'none';
-    document.getElementById('backupApp').style.display = app === 'backup' ? 'block' : 'none';
-    document.getElementById('zipToEpubApp').style.display = app === 'zipToEpub' ? 'block' : 'none';
-    document.getElementById('epubToZipApp').style.display = app === 'epubToZip' ? 'block' : 'none'; // NEW
-
-    let titleText = 'Novelist Tools';
-    if (app === 'splitter') titleText = 'EPUB Chapter Splitter';
-    else if (app === 'backup') titleText = 'Novel Backup File Utility';
-    else if (app === 'zipToEpub') titleText = 'ZIP to EPUB Converter';
-    else if (app === 'epubToZip') titleText = 'EPUB to ZIP (TXT)'; // NEW
-
-    document.getElementById('appTitle').textContent = titleText;
-    toggleMenu();
-}
-
-// Toast specific to the main page structure
-const toastEl = document.getElementById('toast');
 export function showToast(msg, isError = false) {
     if (!toastEl) {
         console.error("Toast element not found");
@@ -34,14 +17,71 @@ export function showToast(msg, isError = false) {
     setTimeout(() => { toastEl.style.opacity = '0'; }, 3000);
 }
 
-// Spinner specific to backup - might move later or generalize
-// For now, let's keep it here as a general UI helper if we make it more generic
-// Or, it can be moved to backup-utility.js if it's only for backup.
-// Let's assume it's a general spinner toggler for now and pass the element.
 export function toggleSpinner(spinnerElement, show) {
     if (!spinnerElement) {
-        console.error("Spinner element not provided");
+        // console.warn("Spinner element not provided for toggleSpinner"); // Less intrusive warning
         return;
     }
     spinnerElement.style.display = show ? 'block' : 'none';
+}
+
+
+// Function to show the dashboard and hide all tools
+export function showDashboard() {
+    const dashboardAppEl = document.getElementById('dashboardApp');
+    const splitterAppEl = document.getElementById('splitterApp');
+    const backupAppEl = document.getElementById('backupApp');
+    const zipToEpubAppEl = document.getElementById('zipToEpubApp');
+    const epubToZipAppEl = document.getElementById('epubToZipApp');
+    const appTitleEl = document.getElementById('appTitle');
+    const sidebarEl = document.getElementById('sidebar');
+
+    if (dashboardAppEl) dashboardAppEl.style.display = 'block';
+    if (splitterAppEl) splitterAppEl.style.display = 'none';
+    if (backupAppEl) backupAppEl.style.display = 'none';
+    if (zipToEpubAppEl) zipToEpubAppEl.style.display = 'none';
+    if (epubToZipAppEl) epubToZipAppEl.style.display = 'none';
+
+    if (appTitleEl) appTitleEl.textContent = 'Novelist Tools';
+
+    if (sidebarEl && sidebarEl.classList.contains('open')) {
+        toggleMenu(); // Close sidebar if open
+    }
+}
+
+// This function will now be the main way to activate a tool
+export function launchAppFromCard(appId) {
+    const dashboardAppEl = document.getElementById('dashboardApp');
+    const appTitleEl = document.getElementById('appTitle');
+    const sidebarEl = document.getElementById('sidebar');
+
+    if (dashboardAppEl) dashboardAppEl.style.display = 'none'; // Hide dashboard
+
+    const toolSectionsMap = {
+        'splitter': { elementId: 'splitterApp', title: 'EPUB Chapter Splitter' },
+        'backup': { elementId: 'backupApp', title: 'Novel Backup File Utility' },
+        'zipToEpub': { elementId: 'zipToEpubApp', title: 'ZIP to EPUB Converter' },
+        'epubToZip': { elementId: 'epubToZipApp', title: 'EPUB to ZIP (TXT)' }
+    };
+
+    let currentTitle = 'Novelist Tools'; // Fallback title
+
+    for (const id in toolSectionsMap) {
+        const toolInfo = toolSectionsMap[id];
+        const appElement = document.getElementById(toolInfo.elementId);
+        if (appElement) {
+            if (id === appId) {
+                appElement.style.display = 'block';
+                currentTitle = toolInfo.title;
+            } else {
+                appElement.style.display = 'none';
+            }
+        }
+    }
+
+    if (appTitleEl) appTitleEl.textContent = currentTitle;
+
+    if (sidebarEl && sidebarEl.classList.contains('open')) {
+        toggleMenu(); // Close sidebar if open when launching an app
+    }
 }

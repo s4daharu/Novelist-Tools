@@ -1,217 +1,410 @@
- /* === common reset & UI styles === */
-    body {
-      font-family: 'Segoe UI', Roboto, sans-serif;
-      margin:0; padding:0;
-      background:linear-gradient(135deg,#1a1a1a,#0a0a0a);
-      color:#e0e0e0; -webkit-font-smoothing:antialiased;
-      font-size:16px; line-height:1.6;
-    }
-    header {
-      display:flex; align-items:center;
-      background:#111; padding:15px 20px;
-      position:sticky; top:0; z-index:10;
-    }
-    .menu-toggle { font-size:24px; cursor:pointer; margin-right:20px; }
-    .title { font-size:20px; font-weight:bold; color:#fff; }
+/* css/style.css */
 
-    /* sidebar (hidden offscreen right until .open) */
-    .sidebar {
-      position:fixed; top:0; right:0;
-      width:240px; height:100%; padding:20px;
-      background:#222; box-shadow:-2px 0 8px rgba(0,0,0,0.5);
-      transform:translateX(100%); transition:transform .3s ease;
-      z-index:20; overflow-y:auto;
-    }
-    .sidebar.open { transform:translateX(0); }
-    .sidebar h2 { color:#fff; margin:0 0 20px; }
-    .sidebar button {
-      width:100%; margin-bottom:15px; padding:12px;
-      border:none; border-radius:8px;
-      background:linear-gradient(135deg,#26c6da,#0097a7);
-      color:#fff; font-size:16px; cursor:pointer;
-      transition:all .3s;
-    }
-    .sidebar button:hover {
-      transform:translateY(-2px);
-      box-shadow:0 8px 16px rgba(255,255,255,0.1);
-    }
+/* === common reset & UI styles === */
+body {
+  font-family: 'Segoe UI', Roboto, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #1a1a1a, #0a0a0a);
+  color: #e0e0e0;
+  -webkit-font-smoothing: antialiased;
+  font-size: 16px;
+  line-height: 1.6;
+}
 
-    .container {
-      max-width:480px; margin:20px auto; padding:0 20px;
-    }
-    .card {
-      background:linear-gradient(145deg,#2a2a2a,#202020);
-      padding:30px; border-radius:18px;
-      box-shadow:0 4px 15px rgba(0,0,0,0.3),0 2px 6px rgba(0,0,0,0.2);
-    }
-    h1 {
-      color:#fff; text-align:center;
-      font-size:28px; margin-bottom:25px;
-      text-shadow:0 2px 6px rgba(0,0,0,0.3);
-    }
+header {
+  display: flex;
+  align-items: center;
+  background: #111;
+  padding: 15px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
 
-    .btn {
-      width:100%; max-width:340px; margin:10px auto;
-      padding:14px 30px; border:none; border-radius:12px;
-      cursor:pointer; font-size:16px; font-weight:500;
-      text-align:center; color:white;
-      box-shadow:0 2px 4px rgba(0,0,0,0.1);
-      transition:all .3s cubic-bezier(.25,.8,.25,1);
-      display:block; box-sizing:border-box;
-    }
-    .btn:disabled {
-      opacity:.6; cursor:not-allowed; transform:none;
-      box-shadow:none;
-    }
+.menu-toggle {
+  font-size: 24px;
+  cursor: pointer;
+  margin-right: 20px;
+}
 
-    /* EPUB Splitter buttons */
-    .upload-btn { background:linear-gradient(135deg,#7e57c2,#5e37b5); }
-    .split-btn  { background:linear-gradient(135deg,#26c6da,#0097a7); }
-    .download-btn{ background:linear-gradient(135deg,#ff7043,#e64a19); }
+.title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #fff;
+}
 
-    .mode-section, .options-section {
-      text-align:center; margin-bottom:25px;
-    }
-    .mode-section select,
-    .option-group input {
-      background:#2e2e2e; border:2px solid transparent;
-      border-radius:8px; padding:12px; font-size:14px;
-      color:#e0e0e0; width:100%; max-width:300px;
-      margin:10px auto 0; box-sizing:border-box;
-      transition:border-color .3s, box-shadow .3s;
-    }
-    .option-group { margin-bottom:15px; }
-    .option-group label { color:#ffffffcc; margin-bottom:8px; display:block; }
+/* sidebar (hidden offscreen right until .open) */
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 240px;
+  height: 100%;
+  padding: 20px;
+  background: #222;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.5);
+  transform: translateX(100%);
+  transition: transform .3s ease;
+  z-index: 20;
+  overflow-y: auto;
+}
 
-    .spinner, .spinner-backup {
-      border:5px solid rgba(255,255,255,0.1);
-      border-top:5px solid #4a90e2;
-      border-radius:50%; width:45px; height:45px;
-      animation:spin 1.2s linear infinite;
-      margin:20px auto; display:none;
-    }
-    @keyframes spin { to { transform:rotate(360deg); } }
+.sidebar.open {
+  transform: translateX(0);
+}
 
-    #statusMessage {
-      border-radius:10px; padding:16px;
-      margin-top:20px; animation:slideIn .3s ease-out;
-    }
-    @keyframes slideIn { from { opacity:0; transform:translateY(20px);} to { opacity:1; transform:translateY(0);} }
+.sidebar h2 {
+  color: #fff;
+  margin: 0 0 20px;
+}
 
-    /* Backup tool */
-    .operation-selector, .operation-section { margin-bottom:25px; }
-    select, input[type="text"], input[type="number"], input[type="file"], textarea {
-      width:100%; padding:12px; margin-bottom:15px;
-      background:#2e2e2e; border:2px solid transparent;
-      border-radius:8px; color:#e0e0e0; font-size:14px;
-      box-sizing:border-box; transition:border-color .3s, box-shadow .3s;
-    }
-    textarea { resize:vertical; min-height:80px; }
-    .btn-primary { background:linear-gradient(135deg,#26c6da,#0097a7); }
-    .btn-accent  { background:linear-gradient(135deg,#7e57c2,#5e37b5); }
+.sidebar button {
+  width: 100%;
+  margin-bottom: 15px;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #26c6da, #0097a7);
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all .3s;
+}
 
-    .status-toast {
-      position:fixed; bottom:20px; left:50%;
-      transform:translateX(-50%);
-      padding:14px 24px; border-radius:8px;
-      color:#fff; font-size:14px;
-      opacity:0; pointer-events:none;
-      transition:opacity .3s;
-      z-index:1000;
-    }
-    .toast-success { background:#38a86d; }
-    .toast-error   { background:#ff6b6b; }
+.sidebar button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(255, 255, 255, 0.1);
+}
 
-   
+.container {
+  max-width: 1000px; /* Adjusted for potentially wider dashboard */
+  margin: 20px auto;
+  padding: 0 20px;
+}
 
-    .option-group { margin-bottom:15px; } /* Ensure consistent bottom margin for all option groups */
+/* General Card style for tool sections */
+.card {
+  background: linear-gradient(145deg, #2a2a2a, #202020);
+  padding: 30px;
+  border-radius: 18px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.2);
+}
 
-    /* Modify the general .option-group label to NOT target our new checkbox wrapper by default */
-    /* This is for labels that sit ABOVE their respective input fields */
-    .option-group > label:not(.checkbox-label-wrapper) { /* Exclude the checkbox wrapper */
-      color:#ffffffcc;
-      margin-bottom:8px;
-      display:block;
-    }
-
-    /* NEW Styles for the Checkbox and its Label Wrapper */
-    #epubToZipApp .checkbox-label-wrapper {
-      display: flex;        /* Align checkbox and text nicely */
-      align-items: center;  /* Vertically center items */
-      color: #ffffffcc;     /* Match other label text color */
-      cursor: pointer;      /* Indicate it's clickable */
-      user-select: none;    /* Prevent text selection when clicking */
-      padding: 5px 0;       /* Add a little vertical padding for better feel */
-      margin-bottom: 0;     /* Reset margin-bottom if it's part of a tighter group before the number input */
-    }
-
-    #epubToZipApp .checkbox-label-wrapper input[type="checkbox"] {
-      /* Reset many global input styles that might be affecting the checkbox */
-      width: auto;              /* Let checkbox be its natural size */
-      height: auto;
-      background: transparent;  /* Remove custom background */
-      border: 1px solid #555; /* Give it a subtle border to match dark theme, or 'none' if preferred */
-      border-radius: 3px;       /* Slightly rounded corners for the checkbox */
-      padding: 0;
-      margin: 0 10px 0 0;     /* Margin: Top, Right, Bottom, Left. Space after checkbox, before text */
-      max-width: none;
-      box-shadow: none;
-      flex-shrink: 0;         /* Prevent checkbox from shrinking */
-      appearance: none;       /* Remove default browser styling (important for custom look) */
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      position: relative;     /* For custom checkmark positioning */
-      width: 16px;            /* Define explicit size */
-      height: 16px;
-      outline: none;          /* Remove focus outline if you add a custom one */
-      cursor: pointer;
-    }
-
-    /* Custom checkmark using a pseudo-element */
-    #epubToZipApp .checkbox-label-wrapper input[type="checkbox"]::before {
-      content: '';
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 5px;
-      height: 10px;
-      border: solid white;
-      border-width: 0 2px 2px 0;
-      transform: translate(-50%, -60%) rotate(45deg); /* Center and rotate checkmark, adjust -60% for vertical alignment */
-      opacity: 0; /* Hidden by default */
-      transition: opacity 0.2s ease-in-out;
-    }
-
-    #epubToZipApp .checkbox-label-wrapper input[type="checkbox"]:checked::before {
-      opacity: 1; /* Show checkmark when checked */
-    }
-
-    /* Optional: Style for when checkbox is focused (accessibility) */
-    #epubToZipApp .checkbox-label-wrapper input[type="checkbox"]:focus-visible {
-      box-shadow: 0 0 0 2px rgba(0, 151, 167, 0.5); /* Similar to other focused inputs */
-    }
+/* Tool-specific section styling (applied to .card when a tool is active) */
+.tool-section {
+  max-width: 600px; /* Or your preferred max-width for tool sections */
+  margin: 20px auto; /* Center the tool section when active */
+}
 
 
-    /* Styling for the number input within its group, making it consistent */
-    #epubToZipRemoveLinesOptionsGroup input[type="number"] {
-      background:#2e2e2e; border:2px solid transparent;
-      border-radius:8px; padding:12px; font-size:14px;
-      color:#e0e0e0; width:100%; max-width:100px; /* Make it smaller */
-      margin: 5px 0 0 0; /* Adjust margin, remove auto for left alignment */
-      box-sizing:border-box;
-      transition:border-color .3s, box-shadow .3s;
-    }
-    #epubToZipRemoveLinesOptionsGroup input[type="number"]:focus {
-      border-color: #0097a7;
-      box-shadow: 0 0 0 2px rgba(0, 151, 167, 0.5);
-    }
-    #epubToZipRemoveLinesOptionsGroup {
-      padding-left: 26px; /* Indent it slightly under the checkbox (approx checkbox width + margin) */
-      /* display: none; is handled by JS */
-    }
+h1 { /* General H1, will be overridden by dashboard/tool-specific H1 if needed */
+  color: #fff;
+  text-align: center;
+  font-size: 28px;
+  margin-bottom: 25px;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
 
-    /* Adjust margin for the group containing the number input if the checkbox label doesn't have margin-bottom */
-    #epubToZipRemoveLinesOptionsGroup {
-        margin-top: 5px; /* Add some space if the checkbox label had its margin-bottom removed */
-        margin-bottom: 15px; /* Ensure consistent spacing below this group */
-    }
+.btn {
+  width: 100%;
+  max-width: 340px;
+  margin: 10px auto;
+  padding: 14px 30px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: center;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all .3s cubic-bezier(.25, .8, .25, 1);
+  display: block;
+  box-sizing: border-box;
+}
+
+.btn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* EPUB Splitter & some common button styles */
+.upload-btn { background: linear-gradient(135deg, #7e57c2, #5e37b5); }
+.split-btn { background: linear-gradient(135deg, #26c6da, #0097a7); } /* Used by multiple tools */
+.download-btn { background: linear-gradient(135deg, #ff7043, #e64a19); }
+
+.mode-section, .options-section {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.mode-section select,
+.option-group input[type="text"],
+.option-group input[type="number"],
+.option-group select { /* General styling for inputs/selects within option groups */
+  background: #2e2e2e;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 14px;
+  color: #e0e0e0;
+  width: 100%;
+  max-width: 300px;
+  margin: 10px auto 0;
+  box-sizing: border-box;
+  transition: border-color .3s, box-shadow .3s;
+}
+.option-group input[type="text"]:focus,
+.option-group input[type="number"]:focus,
+.option-group select:focus {
+  border-color: #0097a7;
+  box-shadow: 0 0 0 2px rgba(0, 151, 167, 0.5);
+}
+
+
+.option-group { margin-bottom: 15px; }
+
+.option-group > label:not(.checkbox-label-wrapper) { /* For labels above inputs */
+  color: #ffffffcc;
+  margin-bottom: 8px;
+  display: block;
+}
+
+
+/* Checkbox styling */
+.checkbox-label-wrapper {
+  display: flex;
+  align-items: center;
+  color: #ffffffcc;
+  cursor: pointer;
+  user-select: none;
+  padding: 5px 0;
+  margin-bottom: 0;
+  justify-content: center; /* Center checkbox and label text if group is text-align:center */
+}
+
+.checkbox-label-wrapper input[type="checkbox"] {
+  width: auto;
+  height: auto;
+  background: transparent;
+  border: 1px solid #555;
+  border-radius: 3px;
+  padding: 0;
+  margin: 0 10px 0 0;
+  max-width: none;
+  box-shadow: none;
+  flex-shrink: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  position: relative;
+  width: 16px;
+  height: 16px;
+  outline: none;
+  cursor: pointer;
+  vertical-align: middle; /* Added for better alignment if flex is not enough */
+}
+
+.checkbox-label-wrapper input[type="checkbox"]::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -60%) rotate(45deg);
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.checkbox-label-wrapper input[type="checkbox"]:checked::before {
+  opacity: 1;
+}
+
+.checkbox-label-wrapper input[type="checkbox"]:focus-visible {
+  box-shadow: 0 0 0 2px rgba(0, 151, 167, 0.5);
+}
+
+/* Specific styling for EPUB to ZIP 'lines to remove' input */
+#epubToZipRemoveLinesOptionsGroup {
+  padding-left: 0; /* Reset if needed, relies on text-align:center of parent */
+  margin-top: 5px;
+  margin-bottom: 15px;
+}
+#epubToZipRemoveLinesOptionsGroup input[type="number"]#epubToZipLinesToRemove {
+  max-width: 100px; /* Small input */
+  margin: 5px auto 0; /* Centered */
+}
+
+
+.spinner, .spinner-backup { /* Common spinner styling */
+  border: 5px solid rgba(255, 255, 255, 0.1);
+  border-top: 5px solid #4a90e2; /* Primary action color for spinner */
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  animation: spin 1.2s linear infinite;
+  margin: 20px auto;
+  display: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+#statusMessage, .status { /* General status message styling */
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 20px;
+  animation: slideIn .3s ease-out;
+  text-align: center; /* Ensure status messages are centered */
+}
+#statusMessage.success, .status.success { background-color: #38a86d; color: white; }
+#statusMessage.error, .status.error { background-color: #ff6b6b; color: white; }
+
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Backup tool specific styles */
+.operation-selector, .operation-section {
+  margin-bottom: 25px;
+}
+
+/* General input, textarea, select styling for backup tool (and potentially others) */
+select, input[type="text"], input[type="number"], input[type="file"], textarea {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  background: #2e2e2e;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 14px;
+  box-sizing: border-box;
+  transition: border-color .3s, box-shadow .3s;
+}
+select:focus, input[type="text"]:focus, input[type="number"]:focus, input[type="file"]:focus, textarea:focus {
+  border-color: #0097a7; /* Theme color for focus */
+  box-shadow: 0 0 0 2px rgba(0, 151, 167, 0.5);
+}
+/* Override general input styles for file inputs if they need specific styling */
+input[type="file"] {
+    padding: 8px 12px; /* File inputs often look better with less vertical padding */
+}
+
+
+textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.btn-primary { background: linear-gradient(135deg, #26c6da, #0097a7); }
+.btn-accent { background: linear-gradient(135deg, #7e57c2, #5e37b5); }
+
+.status-toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 14px 24px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .3s;
+  z-index: 1000;
+}
+
+.toast-success { background: #38a86d; }
+.toast-error { background: #ff6b6b; }
+
+
+/* Dashboard Styles */
+.dashboard-container {
+  text-align: center;
+  padding: 20px 0; /* Padding top/bottom, horizontal handled by .container */
+}
+
+.dashboard-container h1 {
+  font-size: 32px;
+  margin-bottom: 15px;
+  color: #fff;
+}
+
+.dashboard-intro {
+  font-size: 18px;
+  color: #b0b0b0;
+  margin-bottom: 30px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.tool-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 25px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.tool-card {
+  background: linear-gradient(145deg, #2e2e2e, #242424);
+  padding: 25px;
+  border-radius: 15px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4), 0 3px 8px rgba(0, 0, 0, 0.3);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid #3a3a3a;
+  display: flex; /* For better internal alignment if needed */
+  flex-direction: column; /* Stack icon, title, p */
+}
+
+.tool-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 10px 30px rgba(0, 151, 167, 0.3), 0 6px 15px rgba(0, 151, 167, 0.2);
+  border-color: #0097a7;
+}
+
+.tool-card-icon {
+  font-size: 40px; /* Slightly smaller emoji */
+  margin-bottom: 15px;
+  text-align: center;
+  color: #0097a7;
+  line-height: 1; /* Prevent extra space from line height for emojis */
+}
+
+.tool-card h2 {
+  font-size: 20px; /* Slightly smaller card title */
+  color: #fff;
+  margin-top: 0;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.tool-card p {
+  font-size: 14px; /* Slightly smaller card paragraph */
+  color: #c0c0c0;
+  line-height: 1.5;
+  margin-bottom: 0;
+  text-align: center;
+  flex-grow: 1; /* Allows paragraph to take available space if cards have varying content length */
+}
