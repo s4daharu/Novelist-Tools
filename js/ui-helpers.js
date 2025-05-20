@@ -19,11 +19,12 @@ export function showToast(msg, isError = false) {
 
 export function toggleSpinner(spinnerElement, show) {
     if (!spinnerElement) {
-        return;
+        return; // Silently return if no spinner element is provided
     }
     spinnerElement.style.display = show ? 'block' : 'none';
 }
 
+// Moved to module scope so both showDashboard and launchAppFromCard can use it
 const toolSectionsMap = {
     'splitter': { elementId: 'splitterApp', title: 'EPUB Chapter Splitter' },
     'backup': { elementId: 'backupApp', title: 'Novel Backup File Utility' },
@@ -31,14 +32,18 @@ const toolSectionsMap = {
     'epubToZip': { elementId: 'epubToZipApp', title: 'EPUB to ZIP (TXT)' }
 };
 
-// Function to show the dashboard and hide all tools
-export function showDashboard(isInitialLoad = false) {
+/**
+ * Displays the main dashboard.
+ * Always replaces the current history state to represent the dashboard.
+ */
+export function showDashboard() {
     const dashboardAppEl = document.getElementById('dashboardApp');
     const appTitleEl = document.getElementById('appTitle');
     const sidebarEl = document.getElementById('sidebar');
 
     if (dashboardAppEl) dashboardAppEl.style.display = 'block';
 
+    // Hide all tool sections
     for (const id in toolSectionsMap) {
         const toolInfo = toolSectionsMap[id];
         const appElement = document.getElementById(toolInfo.elementId);
@@ -48,27 +53,32 @@ export function showDashboard(isInitialLoad = false) {
     if (appTitleEl) appTitleEl.textContent = 'Novelist Tools';
 
     if (sidebarEl && sidebarEl.classList.contains('open')) {
-        toggleMenu();
+        toggleMenu(); // Close sidebar if open
     }
 
-    // For history management:
-    // If it's the initial load or navigating back to dashboard, replace state.
-    // This prevents adding multiple dashboard entries to history if user clicks "Home Dashboard" repeatedly.
+    // Always replace the current history state to reflect that the dashboard is active.
+    // This prevents building up a history of dashboard views and cleans the state.
     history.replaceState({ view: 'dashboard' }, 'Novelist Tools Dashboard', window.location.pathname + window.location.search);
-    sessionStorage.removeItem('activeToolId'); // Clear active tool on showing dashboard
-    console.log("State replaced: dashboard");
+    sessionStorage.removeItem('activeToolId'); // Clear any persisted active tool
+    console.log("UI: Switched to Dashboard view, history state replaced.");
 }
 
+/**
+ * Launches a specific tool.
+ * @param {string} appId - The ID of the tool to launch (e.g., 'splitter').
+ * @param {boolean} fromHistory - True if this function is called due to a popstate event (back/forward).
+ */
 export function launchAppFromCard(appId, fromHistory = false) {
     const dashboardAppEl = document.getElementById('dashboardApp');
     const appTitleEl = document.getElementById('appTitle');
     const sidebarEl = document.getElementById('sidebar');
 
-    if (dashboardAppEl) dashboardAppEl.style.display = 'none';
+    if (dashboardAppEl) dashboardAppEl.style.display = 'none'; // Hide dashboard
 
-    let currentTitle = 'Novelist Tools';
-    let toolLaunched = false;
+    let currentTitle = 'Novelist Tools'; // Default title
+    let toolLaunchedSuccessfully = false;
 
+    // Show the selected tool and hide others
     for (const id in toolSectionsMap) {
         const toolInfo = toolSectionsMap[id];
         const appElement = document.getElementById(toolInfo.elementId);
@@ -76,33 +86,34 @@ export function launchAppFromCard(appId, fromHistory = false) {
             if (id === appId) {
                 appElement.style.display = 'block';
                 currentTitle = toolInfo.title;
-                toolLaunched = true;
+                toolLaunchedSuccessfully = true;
             } else {
                 appElement.style.display = 'none';
             }
         }
     }
 
-    if (!toolLaunched) { // If appId is invalid, show dashboard
-        showDashboard();
+    // If the appId was invalid or the element wasn't found, default to dashboard
+    if (!toolLaunchedSuccessfully) {
+        console.warn(`Tool with ID '${appId}' not found or failed to launch. Showing dashboard.`);
+        showDashboard(); // This will also handle history.replaceState for dashboard
         return;
     }
 
     if (appTitleEl) appTitleEl.textContent = currentTitle;
 
     if (sidebarEl && sidebarEl.classList.contains('open')) {
-        toggleMenu();
+        toggleMenu(); // Close sidebar if open
     }
 
-    // For history management:
-    // Only push state if not being called from a popstate event (to avoid loops)
-    // and if a valid tool was actually launched.
-    if (!fromHistory && toolLaunched) {
-        history.pushState({ view: 'tool', toolId: appId }, currentTitle, window.location.pathname + window.location.search);
-        sessionStorage.setItem('activeToolId', appId); // Store active tool for refresh
-        console.log("State pushed: tool -", appId);
-    } else if (fromHistory && toolLaunched) {
-        // If called from history, ensure sessionStorage is updated if not already
+    // Manage browser history
+    if (toolLaunchedSuccessfully) {
+        if (!fromHistory) {
+            // If launched by user action (not back/forward), push a new state for the tool.
+            history.pushState({ view: 'tool', toolId: appId }, currentTitle, window.location.pathname + window.location.search);
+            console.log(`UI: Launched tool '${appId}', history state pushed.`);
+        }
+        // Always update sessionStorage for refresh persistence when a tool is active
         sessionStorage.setItem('activeToolId', appId);
     }
 }

@@ -12,58 +12,74 @@ import { initializeBackupUtility } from './backup-utility.js';
 import { initializeZipToEpub } from './zip-to-epub.js';
 import { initializeEpubToZip } from './epub-to-zip.js';
 
+// Make functions globally available for HTML onclick attributes
 window.toggleMenu = toggleMenu;
-window.launchAppFromCard = launchAppFromCard; // Direct call from HTML, will push state
-window.showDashboard = () => showDashboard(); // Ensure it calls our version that manages state
+window.launchAppFromCard = launchAppFromCard; // User clicks directly call this
+window.showDashboard = showDashboard;       // User clicks "Home Dashboard" call this
 
+// Initialize PWA features
 initializePWA();
 
+// DOM Ready: Initialize tools and set up initial view
 document.addEventListener('DOMContentLoaded', () => {
+    // Get spinner elements for each tool
     const spinnerSplEl = document.getElementById('spinnerSplitter');
     const spinnerBackupEl = document.getElementById('spinnerBackup');
     const spinnerZipToEpubEl = document.getElementById('spinnerZipToEpub');
     const spinnerEpubToZipEl = document.getElementById('spinnerEpubToZip');
 
+    // Initialize each tool module, passing helper functions
     initializeEpubSplitter(showToast, (show) => displaySpinnerElement(spinnerSplEl, show));
     initializeBackupUtility(showToast, (show) => displaySpinnerElement(spinnerBackupEl, show));
     initializeZipToEpub(showToast, (show) => displaySpinnerElement(spinnerZipToEpubEl, show));
     initializeEpubToZip(showToast, (show) => displaySpinnerElement(spinnerEpubToZipEl, show));
 
-    // Back button / Popstate handling
+    // --- Browser History (Back/Forward Button) Handling ---
     window.addEventListener('popstate', (event) => {
-        console.log("Popstate event:", event.state);
+        console.log("MAIN: Popstate event triggered. Current history state:", event.state);
         if (event.state) {
+            // A state object exists, determine which view to show
             if (event.state.view === 'tool' && event.state.toolId) {
-                // We are going "forward" or "back" to a tool view
-                launchAppFromCard(event.state.toolId, true); // Pass fromHistory = true
+                // Navigate to the specific tool view
+                console.log(`MAIN: Popstate - restoring tool view: ${event.state.toolId}`);
+                launchAppFromCard(event.state.toolId, true); // true indicates it's from history navigation
             } else if (event.state.view === 'dashboard') {
-                // We are going "back" to the dashboard view
+                // Navigate to the dashboard view
+                console.log("MAIN: Popstate - restoring dashboard view.");
                 showDashboard();
             } else {
-                // Fallback or unknown state, show dashboard
+                // Unknown state, default to dashboard
+                console.warn("MAIN: Popstate - unknown state, defaulting to dashboard.");
                 showDashboard();
             }
         } else {
-            // If event.state is null, it often means we've gone back past our initial replaceState
-            // or to a state not managed by this session's PWA logic. Default to dashboard.
+            // event.state is null. This can happen if:
+            // 1. It's the initial page load (before any pushState/replaceState by our app).
+            // 2. The user has navigated back past the states managed by our application.
+            // In general, defaulting to the dashboard is a safe bet.
+            console.log("MAIN: Popstate - event.state is null, showing dashboard.");
             showDashboard();
         }
     });
 
-    // Initial view logic (handles refresh)
+    // --- Initial Page Load / Refresh Logic ---
     const persistedToolId = sessionStorage.getItem('activeToolId');
     if (persistedToolId) {
-        console.log("Persisted tool found on load:", persistedToolId);
-        // When refreshing into a tool, we should also ensure its state is in history
-        // So, we call launchAppFromCard normally, it will push state.
-        // However, to avoid duplicate history on initial load if it's from a persisted state,
-        // we might want to replaceState here instead of pushState inside launchAppFromCard
-        // for this specific scenario. For simplicity now, launchAppFromCard will push state.
-        // A more refined approach might involve `launchAppFromCard(persistedToolId, true)`
-        // and then `history.replaceState({ view: 'tool', toolId: persistedToolId }, ...)`.
-        launchAppFromCard(persistedToolId); // This will pushState and set sessionStorage again.
+        // User refreshed while a tool was active
+        console.log(`MAIN: Page load/refresh - persisted tool ID found: '${persistedToolId}'. Restoring tool.`);
+
+        // 1. CRITICAL: Establish the "dashboard" as the state *before* the tool in history.
+        // This ensures that if the user presses "back" after this refresh, they go to the dashboard.
+        // We use replaceState so it doesn't add a new entry if the current one is already dashboard (e.g. from a previous popstate to dashboard)
+        history.replaceState({ view: 'dashboard' }, 'Novelist Tools Dashboard', window.location.pathname + window.location.search);
+        console.log("MAIN: Page load/refresh - dashboard state REPLACED (to be behind the tool).");
+
+        // 2. Now, launch the persisted tool. launchAppFromCard will PUSH the tool's state.
+        // The history stack will now be [Dashboard State, Persisted Tool State]
+        launchAppFromCard(persistedToolId, false); // false: it's not from a popstate, it's an initial setup
     } else {
-        console.log("No persisted tool, showing dashboard.");
-        showDashboard(true); // Pass true for initial load state replacement
+        // No persisted tool (fresh load or user was on dashboard before refresh)
+        console.log("MAIN: Page load/refresh - no persisted tool. Showing dashboard.");
+        showDashboard(); // This will use replaceState to set the initial dashboard state.
     }
 });
