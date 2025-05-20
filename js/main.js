@@ -1,63 +1,61 @@
 // js/main.js
 import {
     toggleMenu,
-    launchAppFromCard,
+    launchAppFromCard, // This is the primary function for user clicks
     showDashboard,
     showToast,
-    toggleSpinner as displaySpinnerElement
+    toggleSpinner as displaySpinnerElement,
+    // We need displayTool if we're calling it directly, but launchAppFromCard now uses it internally
 } from './ui-helpers.js';
+// Import displayTool if you intend to call it directly from main.js outside of launchAppFromCard
+// For this specific refresh logic, we will call launchAppFromCard which handles display.
+
 import { initializePWA } from './pwa-handler.js';
 import { initializeEpubSplitter } from './epub-splitter.js';
 import { initializeBackupUtility } from './backup-utility.js';
 import { initializeZipToEpub } from './zip-to-epub.js';
 import { initializeEpubToZip } from './epub-to-zip.js';
 
-// Make functions globally available for HTML onclick attributes
 window.toggleMenu = toggleMenu;
-window.launchAppFromCard = launchAppFromCard; // User clicks directly call this
-window.showDashboard = showDashboard;       // User clicks "Home Dashboard" call this
+window.launchAppFromCard = launchAppFromCard;
+window.showDashboard = showDashboard;
 
-// Initialize PWA features
 initializePWA();
 
-// DOM Ready: Initialize tools and set up initial view
 document.addEventListener('DOMContentLoaded', () => {
-    // Get spinner elements for each tool
     const spinnerSplEl = document.getElementById('spinnerSplitter');
     const spinnerBackupEl = document.getElementById('spinnerBackup');
     const spinnerZipToEpubEl = document.getElementById('spinnerZipToEpub');
     const spinnerEpubToZipEl = document.getElementById('spinnerEpubToZip');
 
-    // Initialize each tool module, passing helper functions
     initializeEpubSplitter(showToast, (show) => displaySpinnerElement(spinnerSplEl, show));
     initializeBackupUtility(showToast, (show) => displaySpinnerElement(spinnerBackupEl, show));
     initializeZipToEpub(showToast, (show) => displaySpinnerElement(spinnerZipToEpubEl, show));
     initializeEpubToZip(showToast, (show) => displaySpinnerElement(spinnerEpubToZipEl, show));
 
-    // --- Browser History (Back/Forward Button) Handling ---
     window.addEventListener('popstate', (event) => {
-        console.log("MAIN: Popstate event triggered. Current history state:", event.state);
+        console.log("MAIN: Popstate event. State:", event.state);
         if (event.state) {
-            // A state object exists, determine which view to show
             if (event.state.view === 'tool' && event.state.toolId) {
-                // Navigate to the specific tool view
-                console.log(`MAIN: Popstate - restoring tool view: ${event.state.toolId}`);
-                launchAppFromCard(event.state.toolId, true); // true indicates it's from history navigation
+                console.log(`MAIN: Popstate - restoring tool: ${event.state.toolId}`);
+                launchAppFromCard(event.state.toolId, true); // true for fromPopState
             } else if (event.state.view === 'dashboard') {
-                // Navigate to the dashboard view
-                console.log("MAIN: Popstate - restoring dashboard view.");
+                console.log("MAIN: Popstate - restoring dashboard.");
                 showDashboard();
             } else {
-                // Unknown state, default to dashboard
                 console.warn("MAIN: Popstate - unknown state, defaulting to dashboard.");
                 showDashboard();
             }
         } else {
-            // event.state is null. This can happen if:
-            // 1. It's the initial page load (before any pushState/replaceState by our app).
-            // 2. The user has navigated back past the states managed by our application.
-            // In general, defaulting to the dashboard is a safe bet.
-            console.log("MAIN: Popstate - event.state is null, showing dashboard.");
+            // This case implies the user has gone "back" beyond the app's managed history.
+            // Or it's the very initial state of a new tab before any replaceState.
+            // If the app is meant to "take over" the history, this might lead to dashboard.
+            // If the user *can* go back further (e.g. to google.com), then this means they've left our SPA's control.
+            // For SPA back button, showing dashboard is safest if state is null.
+            console.log("MAIN: Popstate - event.state is null. Showing dashboard (or app exit if browser allows).");
+            // Check if we are at the very first entry in history. If so, "back" might exit.
+            // This is hard to reliably detect across browsers just from popstate.
+            // For now, consistently show dashboard.
             showDashboard();
         }
     });
@@ -65,21 +63,32 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Initial Page Load / Refresh Logic ---
     const persistedToolId = sessionStorage.getItem('activeToolId');
     if (persistedToolId) {
-        // User refreshed while a tool was active
-        console.log(`MAIN: Page load/refresh - persisted tool ID found: '${persistedToolId}'. Restoring tool.`);
+        console.log(`MAIN: Page load/refresh - Persisted tool ID: '${persistedToolId}'.`);
 
-        // 1. CRITICAL: Establish the "dashboard" as the state *before* the tool in history.
-        // This ensures that if the user presses "back" after this refresh, they go to the dashboard.
-        // We use replaceState so it doesn't add a new entry if the current one is already dashboard (e.g. from a previous popstate to dashboard)
+        // 1. Display the tool UI first without altering history yet.
+        // We need a way to just show the tool. We'll use launchAppFromCard but tell it not to push history yet.
+        // The internal displayTool function in ui-helpers helps here.
+        // For simplicity, let launchAppFromCard handle the display logic, and we'll fix history after.
+
+        // Call launchAppFromCard but indicate it's an initial setup *for display purposes*
+        // and that history will be managed immediately after.
+        // The `fromPopState = true` will prevent `launchAppFromCard` from pushing state.
+        launchAppFromCard(persistedToolId, true); // Display tool, update sessionStorage, DO NOT PUSH HISTORY
+        console.log(`MAIN: Page load/refresh - Tool '${persistedToolId}' UI displayed.`);
+
+        // 2. Now, MANUALLY construct the history stack for this refreshed state.
+        // The current page (showing the tool) should have the "dashboard" state as its predecessor.
         history.replaceState({ view: 'dashboard' }, 'Novelist Tools Dashboard', window.location.pathname + window.location.search);
-        console.log("MAIN: Page load/refresh - dashboard state REPLACED (to be behind the tool).");
+        console.log("MAIN: Page load/refresh - History REPLACED with DUMMY dashboard state.");
 
-        // 2. Now, launch the persisted tool. launchAppFromCard will PUSH the tool's state.
-        // The history stack will now be [Dashboard State, Persisted Tool State]
-        launchAppFromCard(persistedToolId, false); // false: it's not from a popstate, it's an initial setup
+        // 3. Push the actual tool state on top of the dummy dashboard state.
+        // This makes the history: [..., dashboard, currentTool]
+        const toolInfo = toolSectionsMap[persistedToolId] || { title: 'Loaded Tool' }; // Get title from map
+        history.pushState({ view: 'tool', toolId: persistedToolId }, toolInfo.title, window.location.pathname + window.location.search);
+        console.log(`MAIN: Page load/refresh - History PUSHED for tool '${persistedToolId}' on top of dashboard.`);
+
     } else {
-        // No persisted tool (fresh load or user was on dashboard before refresh)
-        console.log("MAIN: Page load/refresh - no persisted tool. Showing dashboard.");
-        showDashboard(); // This will use replaceState to set the initial dashboard state.
+        console.log("MAIN: Page load/refresh - No persisted tool. Showing dashboard.");
+        showDashboard(); // This uses replaceState for the initial dashboard state.
     }
 });
