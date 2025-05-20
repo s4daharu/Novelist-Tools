@@ -1,0 +1,217 @@
+ /* === common reset & UI styles === */
+    body {
+      font-family: 'Segoe UI', Roboto, sans-serif;
+      margin:0; padding:0;
+      background:linear-gradient(135deg,#1a1a1a,#0a0a0a);
+      color:#e0e0e0; -webkit-font-smoothing:antialiased;
+      font-size:16px; line-height:1.6;
+    }
+    header {
+      display:flex; align-items:center;
+      background:#111; padding:15px 20px;
+      position:sticky; top:0; z-index:10;
+    }
+    .menu-toggle { font-size:24px; cursor:pointer; margin-right:20px; }
+    .title { font-size:20px; font-weight:bold; color:#fff; }
+
+    /* sidebar (hidden offscreen right until .open) */
+    .sidebar {
+      position:fixed; top:0; right:0;
+      width:240px; height:100%; padding:20px;
+      background:#222; box-shadow:-2px 0 8px rgba(0,0,0,0.5);
+      transform:translateX(100%); transition:transform .3s ease;
+      z-index:20; overflow-y:auto;
+    }
+    .sidebar.open { transform:translateX(0); }
+    .sidebar h2 { color:#fff; margin:0 0 20px; }
+    .sidebar button {
+      width:100%; margin-bottom:15px; padding:12px;
+      border:none; border-radius:8px;
+      background:linear-gradient(135deg,#26c6da,#0097a7);
+      color:#fff; font-size:16px; cursor:pointer;
+      transition:all .3s;
+    }
+    .sidebar button:hover {
+      transform:translateY(-2px);
+      box-shadow:0 8px 16px rgba(255,255,255,0.1);
+    }
+
+    .container {
+      max-width:480px; margin:20px auto; padding:0 20px;
+    }
+    .card {
+      background:linear-gradient(145deg,#2a2a2a,#202020);
+      padding:30px; border-radius:18px;
+      box-shadow:0 4px 15px rgba(0,0,0,0.3),0 2px 6px rgba(0,0,0,0.2);
+    }
+    h1 {
+      color:#fff; text-align:center;
+      font-size:28px; margin-bottom:25px;
+      text-shadow:0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    .btn {
+      width:100%; max-width:340px; margin:10px auto;
+      padding:14px 30px; border:none; border-radius:12px;
+      cursor:pointer; font-size:16px; font-weight:500;
+      text-align:center; color:white;
+      box-shadow:0 2px 4px rgba(0,0,0,0.1);
+      transition:all .3s cubic-bezier(.25,.8,.25,1);
+      display:block; box-sizing:border-box;
+    }
+    .btn:disabled {
+      opacity:.6; cursor:not-allowed; transform:none;
+      box-shadow:none;
+    }
+
+    /* EPUB Splitter buttons */
+    .upload-btn { background:linear-gradient(135deg,#7e57c2,#5e37b5); }
+    .split-btn  { background:linear-gradient(135deg,#26c6da,#0097a7); }
+    .download-btn{ background:linear-gradient(135deg,#ff7043,#e64a19); }
+
+    .mode-section, .options-section {
+      text-align:center; margin-bottom:25px;
+    }
+    .mode-section select,
+    .option-group input {
+      background:#2e2e2e; border:2px solid transparent;
+      border-radius:8px; padding:12px; font-size:14px;
+      color:#e0e0e0; width:100%; max-width:300px;
+      margin:10px auto 0; box-sizing:border-box;
+      transition:border-color .3s, box-shadow .3s;
+    }
+    .option-group { margin-bottom:15px; }
+    .option-group label { color:#ffffffcc; margin-bottom:8px; display:block; }
+
+    .spinner, .spinner-backup {
+      border:5px solid rgba(255,255,255,0.1);
+      border-top:5px solid #4a90e2;
+      border-radius:50%; width:45px; height:45px;
+      animation:spin 1.2s linear infinite;
+      margin:20px auto; display:none;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    #statusMessage {
+      border-radius:10px; padding:16px;
+      margin-top:20px; animation:slideIn .3s ease-out;
+    }
+    @keyframes slideIn { from { opacity:0; transform:translateY(20px);} to { opacity:1; transform:translateY(0);} }
+
+    /* Backup tool */
+    .operation-selector, .operation-section { margin-bottom:25px; }
+    select, input[type="text"], input[type="number"], input[type="file"], textarea {
+      width:100%; padding:12px; margin-bottom:15px;
+      background:#2e2e2e; border:2px solid transparent;
+      border-radius:8px; color:#e0e0e0; font-size:14px;
+      box-sizing:border-box; transition:border-color .3s, box-shadow .3s;
+    }
+    textarea { resize:vertical; min-height:80px; }
+    .btn-primary { background:linear-gradient(135deg,#26c6da,#0097a7); }
+    .btn-accent  { background:linear-gradient(135deg,#7e57c2,#5e37b5); }
+
+    .status-toast {
+      position:fixed; bottom:20px; left:50%;
+      transform:translateX(-50%);
+      padding:14px 24px; border-radius:8px;
+      color:#fff; font-size:14px;
+      opacity:0; pointer-events:none;
+      transition:opacity .3s;
+      z-index:1000;
+    }
+    .toast-success { background:#38a86d; }
+    .toast-error   { background:#ff6b6b; }
+
+   
+
+    .option-group { margin-bottom:15px; } /* Ensure consistent bottom margin for all option groups */
+
+    /* Modify the general .option-group label to NOT target our new checkbox wrapper by default */
+    /* This is for labels that sit ABOVE their respective input fields */
+    .option-group > label:not(.checkbox-label-wrapper) { /* Exclude the checkbox wrapper */
+      color:#ffffffcc;
+      margin-bottom:8px;
+      display:block;
+    }
+
+    /* NEW Styles for the Checkbox and its Label Wrapper */
+    #epubToZipApp .checkbox-label-wrapper {
+      display: flex;        /* Align checkbox and text nicely */
+      align-items: center;  /* Vertically center items */
+      color: #ffffffcc;     /* Match other label text color */
+      cursor: pointer;      /* Indicate it's clickable */
+      user-select: none;    /* Prevent text selection when clicking */
+      padding: 5px 0;       /* Add a little vertical padding for better feel */
+      margin-bottom: 0;     /* Reset margin-bottom if it's part of a tighter group before the number input */
+    }
+
+    #epubToZipApp .checkbox-label-wrapper input[type="checkbox"] {
+      /* Reset many global input styles that might be affecting the checkbox */
+      width: auto;              /* Let checkbox be its natural size */
+      height: auto;
+      background: transparent;  /* Remove custom background */
+      border: 1px solid #555; /* Give it a subtle border to match dark theme, or 'none' if preferred */
+      border-radius: 3px;       /* Slightly rounded corners for the checkbox */
+      padding: 0;
+      margin: 0 10px 0 0;     /* Margin: Top, Right, Bottom, Left. Space after checkbox, before text */
+      max-width: none;
+      box-shadow: none;
+      flex-shrink: 0;         /* Prevent checkbox from shrinking */
+      appearance: none;       /* Remove default browser styling (important for custom look) */
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      position: relative;     /* For custom checkmark positioning */
+      width: 16px;            /* Define explicit size */
+      height: 16px;
+      outline: none;          /* Remove focus outline if you add a custom one */
+      cursor: pointer;
+    }
+
+    /* Custom checkmark using a pseudo-element */
+    #epubToZipApp .checkbox-label-wrapper input[type="checkbox"]::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 5px;
+      height: 10px;
+      border: solid white;
+      border-width: 0 2px 2px 0;
+      transform: translate(-50%, -60%) rotate(45deg); /* Center and rotate checkmark, adjust -60% for vertical alignment */
+      opacity: 0; /* Hidden by default */
+      transition: opacity 0.2s ease-in-out;
+    }
+
+    #epubToZipApp .checkbox-label-wrapper input[type="checkbox"]:checked::before {
+      opacity: 1; /* Show checkmark when checked */
+    }
+
+    /* Optional: Style for when checkbox is focused (accessibility) */
+    #epubToZipApp .checkbox-label-wrapper input[type="checkbox"]:focus-visible {
+      box-shadow: 0 0 0 2px rgba(0, 151, 167, 0.5); /* Similar to other focused inputs */
+    }
+
+
+    /* Styling for the number input within its group, making it consistent */
+    #epubToZipRemoveLinesOptionsGroup input[type="number"] {
+      background:#2e2e2e; border:2px solid transparent;
+      border-radius:8px; padding:12px; font-size:14px;
+      color:#e0e0e0; width:100%; max-width:100px; /* Make it smaller */
+      margin: 5px 0 0 0; /* Adjust margin, remove auto for left alignment */
+      box-sizing:border-box;
+      transition:border-color .3s, box-shadow .3s;
+    }
+    #epubToZipRemoveLinesOptionsGroup input[type="number"]:focus {
+      border-color: #0097a7;
+      box-shadow: 0 0 0 2px rgba(0, 151, 167, 0.5);
+    }
+    #epubToZipRemoveLinesOptionsGroup {
+      padding-left: 26px; /* Indent it slightly under the checkbox (approx checkbox width + margin) */
+      /* display: none; is handled by JS */
+    }
+
+    /* Adjust margin for the group containing the number input if the checkbox label doesn't have margin-bottom */
+    #epubToZipRemoveLinesOptionsGroup {
+        margin-top: 5px; /* Add some space if the checkbox label had its margin-bottom removed */
+        margin-bottom: 15px; /* Ensure consistent spacing below this group */
+    }
