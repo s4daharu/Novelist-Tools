@@ -732,7 +732,8 @@ export function initializeBackupUtility(showAppToast, toggleAppSpinner) {
     // --- Find & Replace ---
     const frBackupFileInput = document.getElementById('frBackupFile');
     const findPatternInput = document.getElementById('findPattern');
-    const useRegexCheckbox = document.getElementById('useRegex');
+    // Corrected ID: useRegexBackup
+    const useRegexCheckbox = document.getElementById('useRegexBackup'); 
     const currentMatchDisplay = document.getElementById('currentMatchDisplay');
     const replaceTextInput = document.getElementById('replaceText');
 
@@ -778,13 +779,14 @@ export function initializeBackupUtility(showAppToast, toggleAppSpinner) {
                 showAppToast('Upload a backup file first for Find & Replace.', true); return;
             }
             const pattern = findPatternInput.value;
-            const useRegex = useRegexCheckbox.checked;
+            // Ensure useRegexCheckbox is checked before accessing .checked
+            const useRegex = useRegexCheckbox ? useRegexCheckbox.checked : false; 
             if (!pattern) {
                 showAppToast('Enter a find pattern.', true); return;
             }
             const match = findNextMatch(pattern, useRegex, showAppToast);
             displayMatchText(currentMatchDisplay, match);
-            if (!match && frPtr.scene >= frData.revisions[0].scenes.length) { // To indicate end of search
+            if (!match && frData && frData.revisions && frData.revisions[0] && frPtr.scene >= frData.revisions[0].scenes.length) { // To indicate end of search
                  showAppToast('Reached end of document.', false);
             }
         });
@@ -797,26 +799,29 @@ export function initializeBackupUtility(showAppToast, toggleAppSpinner) {
                 showAppToast('Upload a backup file first for Find & Replace.', true); return;
             }
             const pattern = findPatternInput.value;
-            const useRegex = useRegexCheckbox.checked;
+            // Ensure useRegexCheckbox is checked before accessing .checked
+            const useRegex = useRegexCheckbox ? useRegexCheckbox.checked : false;
              if (!pattern) {
                 showAppToast('Enter a find pattern.', true); return;
             }
             // If frPtr is at the very beginning, or frMatch is null (meaning no current selection or fresh load)
             // set the pointer to the end of the document to start searching backwards correctly.
             if (!frMatch || (frPtr.scene === 0 && frPtr.block === 0 && frPtr.offset === 0)) {
-                const scenes = frData.revisions[0].scenes;
-                if (scenes.length > 0) {
-                    const lastScene = scenes[scenes.length - 1];
-                    let lastBlockIndex = 0;
-                    let lastBlockTextLength = 0;
-                    try {
-                        const lastSceneBlocks = JSON.parse(lastScene.text).blocks;
-                        if (lastSceneBlocks && lastSceneBlocks.length > 0) {
-                            lastBlockIndex = lastSceneBlocks.length - 1;
-                            lastBlockTextLength = lastSceneBlocks[lastBlockIndex].text ? lastSceneBlocks[lastBlockIndex].text.length : 0;
-                        }
-                    } catch(e) { /* ignore parse error for setting pointer */ }
-                    frPtr = { scene: scenes.length - 1, block: lastBlockIndex, offset: lastBlockTextLength };
+                if (frData && frData.revisions && frData.revisions[0] && frData.revisions[0].scenes) {
+                    const scenes = frData.revisions[0].scenes;
+                    if (scenes.length > 0) {
+                        const lastScene = scenes[scenes.length - 1];
+                        let lastBlockIndex = 0;
+                        let lastBlockTextLength = 0;
+                        try {
+                            const lastSceneBlocks = JSON.parse(lastScene.text).blocks;
+                            if (lastSceneBlocks && lastSceneBlocks.length > 0) {
+                                lastBlockIndex = lastSceneBlocks.length - 1;
+                                lastBlockTextLength = lastSceneBlocks[lastBlockIndex].text ? lastSceneBlocks[lastBlockIndex].text.length : 0;
+                            }
+                        } catch(e) { /* ignore parse error for setting pointer */ }
+                        frPtr = { scene: scenes.length - 1, block: lastBlockIndex, offset: lastBlockTextLength };
+                    }
                 }
             }
 
@@ -855,10 +860,11 @@ export function initializeBackupUtility(showAppToast, toggleAppSpinner) {
                 
                 // Automatically find next
                 const pattern = findPatternInput.value;
-                const useRegex = useRegexCheckbox.checked;
+                // Ensure useRegexCheckbox is checked before accessing .checked
+                const useRegex = useRegexCheckbox ? useRegexCheckbox.checked : false;
                 const nextMatchToShow = findNextMatch(pattern, useRegex, showAppToast);
                 displayMatchText(currentMatchDisplay, nextMatchToShow);
-                 if (!nextMatchToShow && frPtr.scene >= frData.revisions[0].scenes.length) {
+                 if (!nextMatchToShow && frData && frData.revisions && frData.revisions[0] && frPtr.scene >= frData.revisions[0].scenes.length) {
                     showAppToast('Reached end of document.', false);
                 }
 
@@ -877,7 +883,8 @@ export function initializeBackupUtility(showAppToast, toggleAppSpinner) {
             }
             const findPattern = findPatternInput.value;
             const replacementText = replaceTextInput.value;
-            const useRegex = useRegexCheckbox.checked;
+            // Ensure useRegexCheckbox is checked before accessing .checked
+            const useRegex = useRegexCheckbox ? useRegexCheckbox.checked : false;
 
             if (!findPattern && !useRegex) { // Allow empty find pattern only if it's a regex (e.g. ^ for start of line)
                 showAppToast('Enter a find pattern.', true); return;
@@ -900,16 +907,21 @@ export function initializeBackupUtility(showAppToast, toggleAppSpinner) {
                                         return replacementText; // Simple replacement, not handling regex groups here
                                     });
                                 } else {
-                                    // Count occurrences for non-regex replace
-                                    let tempText = block.text;
-                                    let count = 0;
-                                    let pos = tempText.indexOf(findPattern);
-                                    while(pos !== -1){
-                                        count++;
-                                        pos = tempText.indexOf(findPattern, pos + findPattern.length);
+                                    // Count occurrences for non-regex replace only if findPattern is not empty
+                                    if (findPattern.length > 0) {
+                                        let tempText = block.text;
+                                        let count = 0;
+                                        let pos = tempText.indexOf(findPattern);
+                                        while(pos !== -1){
+                                            count++;
+                                            pos = tempText.indexOf(findPattern, pos + findPattern.length);
+                                        }
+                                        replacementsCount += count;
+                                        block.text = block.text.split(findPattern).join(replacementText);
+                                    } else { // findPattern is empty, non-regex: do nothing or special handling?
+                                        // Current guard clause `if (!findPattern && !useRegex)` prevents this.
+                                        // If it could reach here, this would be an infinite loop or incorrect.
                                     }
-                                    replacementsCount += count;
-                                    block.text = block.text.split(findPattern).join(replacementText);
                                 }
                             }
                         });
