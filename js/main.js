@@ -22,7 +22,8 @@ initializePWA();
 document.addEventListener('DOMContentLoaded', () => {
     const spinnerSplEl = document.getElementById('spinnerSplitter');
     const spinnerBackupEl = document.getElementById('spinnerBackup');
-    const spinnerZipToEpubEl = document.getElementById('zipToEpub');
+    // Corrected ID: spinnerZipToEpub
+    const spinnerZipToEpubEl = document.getElementById('spinnerZipToEpub'); 
     const spinnerEpubToZipEl = document.getElementById('spinnerEpubToZip');
 
     initializeEpubSplitter(showToast, (show) => displaySpinnerElement(spinnerSplEl, show));
